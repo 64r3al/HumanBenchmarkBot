@@ -132,7 +132,9 @@ class SelectionLabel(QLabel):
 
     selectionChanged = Signal()
 
-    def __init__(self, pixmap: QPixmap, original_size: QSize, parent: QWidget | None = None):
+    def __init__(
+        self, pixmap: QPixmap, original_size: QSize, parent: QWidget | None = None
+    ):
         super().__init__(parent)
         self.setPixmap(pixmap)
         self.setFixedSize(pixmap.size())
@@ -153,7 +155,9 @@ class SelectionLabel(QLabel):
 
     def mouseMoveEvent(self, event) -> None:
         if self._origin is not None:
-            self.selection = QRect(self._origin, event.position().toPoint()).normalized()
+            self.selection = QRect(
+                self._origin, event.position().toPoint()
+            ).normalized()
             self._rubber_band.setGeometry(self.selection)
         super().mouseMoveEvent(event)
 
@@ -298,7 +302,9 @@ class MainWindow(QMainWindow):
         safety_title.setObjectName("CardTitle")
         safety_layout.addWidget(safety_title)
         safety_layout.addWidget(
-            _muted_label("Preview is safe by default. Desktop input always requires confirmation.")
+            _muted_label(
+                "Preview is safe by default. Desktop input always requires confirmation."
+            )
         )
         side_layout.addWidget(safety_card)
         version = QLabel("v0.2.0 · experimental")
@@ -403,7 +409,13 @@ class MainWindow(QMainWindow):
         grid.setHorizontalSpacing(12)
         grid.setVerticalSpacing(12)
         for index, key in enumerate(GAME_LABELS):
-            grid.addWidget(self._game_card(key, "Configure", lambda k=key: self._configure_game(k)), index // 2, index % 2)
+            grid.addWidget(
+                self._game_card(
+                    key, "Configure", lambda k=key: self._configure_game(k)
+                ),
+                index // 2,
+                index % 2,
+            )
         layout.addLayout(grid)
 
         system_card = _make_card()
@@ -474,7 +486,13 @@ class MainWindow(QMainWindow):
         grid.setHorizontalSpacing(14)
         grid.setVerticalSpacing(14)
         for index, key in enumerate(GAME_LABELS):
-            grid.addWidget(self._game_card(key, "Configure game", lambda k=key: self._configure_game(k)), index // 2, index % 2)
+            grid.addWidget(
+                self._game_card(
+                    key, "Configure game", lambda k=key: self._configure_game(k)
+                ),
+                index // 2,
+                index % 2,
+            )
         layout.addLayout(grid)
         notice = QLabel(
             "Passing automated tests does not prove that the current website layout, "
@@ -522,14 +540,20 @@ class MainWindow(QMainWindow):
         wait_box.addWidget(QLabel("Startup countdown (seconds)"))
         self.load_wait_spin = QSpinBox()
         self.load_wait_spin.setRange(0, MAX_LOAD_WAIT)
-        self.load_wait_spin.setValue(int(self.settings.value("run/load_wait", DEFAULT_LOAD_WAIT)))
+        self.load_wait_spin.setValue(
+            int(self.settings.value("run/load_wait", DEFAULT_LOAD_WAIT))
+        )
         wait_box.addWidget(self.load_wait_spin)
         fields.addLayout(wait_box)
         fields.addStretch(1)
         config_layout.addLayout(fields)
 
-        self.debug_checkbox = QCheckBox("Save a diagnostic screenshot when a supported detection failure occurs")
-        self.debug_checkbox.setChecked(self.settings.value("diagnostics/enabled", False, type=bool))
+        self.debug_checkbox = QCheckBox(
+            "Save a diagnostic screenshot when a supported detection failure occurs"
+        )
+        self.debug_checkbox.setChecked(
+            self.settings.value("diagnostics/enabled", False, type=bool)
+        )
         config_layout.addWidget(self.debug_checkbox)
 
         actions = QHBoxLayout()
@@ -573,7 +597,9 @@ class MainWindow(QMainWindow):
         self.session_log = QPlainTextEdit()
         self.session_log.setReadOnly(True)
         self.session_log.setMaximumBlockCount(500)
-        self.session_log.setPlaceholderText("Run messages and actionable errors will appear here.")
+        self.session_log.setPlaceholderText(
+            "Run messages and actionable errors will appear here."
+        )
         self.session_log.setMinimumHeight(180)
         log_layout.addWidget(self.session_log)
         layout.addWidget(log_card)
@@ -688,9 +714,15 @@ class MainWindow(QMainWindow):
         ocr_title = QLabel("OCR")
         ocr_title.setObjectName("CardTitle")
         ocr_layout.addWidget(ocr_title)
-        ocr_layout.addWidget(_muted_label("Required for Verbal Memory only. Leave blank to use Tesseract from PATH."))
+        ocr_layout.addWidget(
+            _muted_label(
+                "Required for Verbal Memory only. Leave blank to use Tesseract from PATH."
+            )
+        )
         path_row = QHBoxLayout()
-        self.tesseract_edit = QLineEdit(self.settings.value("ocr/tesseract_cmd", "", type=str))
+        self.tesseract_edit = QLineEdit(
+            self.settings.value("ocr/tesseract_cmd", "", type=str)
+        )
         self.tesseract_edit.setPlaceholderText("Path to tesseract.exe (optional)")
         browse = _button("Browse")
         test = _button("Check availability")
@@ -709,11 +741,17 @@ class MainWindow(QMainWindow):
         diagnostics_title.setObjectName("CardTitle")
         diagnostics_layout.addWidget(diagnostics_title)
         diagnostics_layout.addWidget(
-            _muted_label("Screenshots may contain other desktop content. They are local and disabled unless explicitly enabled.")
+            _muted_label(
+                "Screenshots may contain other desktop content. They are local and disabled unless explicitly enabled."
+            )
         )
         directory_row = QHBoxLayout()
         self.diagnostics_dir_edit = QLineEdit(
-            self.settings.value("diagnostics/directory", str(config_directory() / "diagnostics"), type=str)
+            self.settings.value(
+                "diagnostics/directory",
+                str(config_directory() / "diagnostics"),
+                type=str,
+            )
         )
         browse_dir = _button("Choose folder")
         open_dir = _button("Open folder")
@@ -739,7 +777,9 @@ class MainWindow(QMainWindow):
         if not 0 <= index < self.stack.count() and self.stack.count() > 0:
             return
         if self.worker is not None and self.worker.isRunning() and index != 2:
-            self.status_bar.showMessage("A run is active. Finish or request cancellation before navigating away.")
+            self.status_bar.showMessage(
+                "A run is active. Finish or request cancellation before navigating away."
+            )
             return
         self.current_page = index
         if self.stack.count():
@@ -764,7 +804,9 @@ class MainWindow(QMainWindow):
         self.rounds_spin.setMaximum(MAX_ROUNDS[key])
         self.rounds_spin.setValue(DEFAULT_ROUNDS[key])
         self.game_description.setText(GAME_DESCRIPTIONS[key])
-        self.preflight_summary.setText("Run preflight after selecting the game and settings.")
+        self.preflight_summary.setText(
+            "Run preflight after selecting the game and settings."
+        )
         self._clear_preflight_rows()
         self.start_button.setEnabled(False)
 
@@ -818,7 +860,9 @@ class MainWindow(QMainWindow):
             self.preflight_rows.addWidget(row)
         self.start_button.setEnabled(blocking_ok and not self._is_running())
         self.dashboard_readiness.setText(
-            "Critical preflight checks passed." if blocking_ok else "At least one critical preflight check needs attention."
+            "Critical preflight checks passed."
+            if blocking_ok
+            else "At least one critical preflight check needs attention."
         )
 
     def _run_preflight(self) -> list[PreflightCheck] | None:
@@ -830,7 +874,9 @@ class MainWindow(QMainWindow):
         checks = build_preflight(config)
         self._display_preflight(checks)
         self.status_bar.showMessage(
-            "Preflight complete" if can_start_run(checks) else "Preflight blocked: fix critical checks"
+            "Preflight complete"
+            if can_start_run(checks)
+            else "Preflight blocked: fix critical checks"
         )
         return checks
 
@@ -876,7 +922,9 @@ class MainWindow(QMainWindow):
         self.current_config = config
         self.pending_result = None
         self.run_started_at = time.monotonic()
-        self._append_log("info", f"Starting {GAME_LABELS[config.game]}. Preflight passed.")
+        self._append_log(
+            "info", f"Starting {GAME_LABELS[config.game]}. Preflight passed."
+        )
         self.start_button.setEnabled(False)
         self.preflight_button.setEnabled(False)
         self.preview_button.setEnabled(False)
@@ -885,7 +933,9 @@ class MainWindow(QMainWindow):
         self.load_wait_spin.setEnabled(False)
         self.debug_checkbox.setEnabled(False)
         self.cancel_button.setEnabled(True)
-        self.status_bar.showMessage("Automation is active. Keep the intended game visible.")
+        self.status_bar.showMessage(
+            "Automation is active. Keep the intended game visible."
+        )
         worker.log.connect(self._append_log)
         worker.result_ready.connect(self._on_worker_result)
         worker.error.connect(self._on_worker_error)
@@ -901,7 +951,9 @@ class MainWindow(QMainWindow):
         self.preflight_summary.setText(
             "Cancellation requested. The routine will stop at its next safe checkpoint."
         )
-        self._append_log("warning", "Cancellation requested; waiting for a safe checkpoint.")
+        self._append_log(
+            "warning", "Cancellation requested; waiting for a safe checkpoint."
+        )
         self.status_bar.showMessage("Cancellation requested…")
 
     def _on_worker_result(self, result: dict[str, Any]) -> None:
@@ -937,9 +989,14 @@ class MainWindow(QMainWindow):
             self.history.add(entry)
         status = str(result.get("status", "unknown"))
         message = str(result.get("message", "No details were returned."))
-        self._append_log("info" if status == "completed_review" else "warning", f"Run status: {status}. {message}")
+        self._append_log(
+            "info" if status == "completed_review" else "warning",
+            f"Run status: {status}. {message}",
+        )
         self.preflight_summary.setText(f"Last run: {status}. {message}")
-        self.status_bar.showMessage(f"Run {status.replace('_', ' ')} · review the result before running again.")
+        self.status_bar.showMessage(
+            f"Run {status.replace('_', ' ')} · review the result before running again."
+        )
         worker = self.worker
         self.worker = None
         self.current_config = None
@@ -989,7 +1046,9 @@ class MainWindow(QMainWindow):
                 widget.deleteLater()
         entries = list(reversed(self.history.read()))
         if not entries:
-            label = _muted_label("No run history yet. Completed, cancelled, and failed sessions will appear here.")
+            label = _muted_label(
+                "No run history yet. Completed, cancelled, and failed sessions will appear here."
+            )
             self.history_list.addWidget(label)
             return
         for entry in entries:
@@ -1002,7 +1061,11 @@ class MainWindow(QMainWindow):
             game.setObjectName("CardTitle")
             timestamp = str(entry.get("timestamp", ""))
             try:
-                stamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00")).astimezone().strftime("%Y-%m-%d %H:%M")
+                stamp = (
+                    datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                    .astimezone()
+                    .strftime("%Y-%m-%d %H:%M")
+                )
             except ValueError:
                 stamp = timestamp
             sub = _muted_label(
@@ -1010,7 +1073,9 @@ class MainWindow(QMainWindow):
             )
             details.addWidget(game)
             details.addWidget(sub)
-            state = QLabel(str(entry.get("status", "unknown")).replace("_", " ").upper())
+            state = QLabel(
+                str(entry.get("status", "unknown")).replace("_", " ").upper()
+            )
             state.setObjectName("StatusPill")
             row.addLayout(details, 1)
             row.addWidget(state, 0, Qt.AlignmentFlag.AlignTop)
@@ -1038,7 +1103,9 @@ class MainWindow(QMainWindow):
             self.calibration_status.setText(f"Invalid profile: {exc}")
             return
         if profile is None:
-            self.calibration_status.setText("No viewport has been saved. Calibration is required before GUI automation.")
+            self.calibration_status.setText(
+                "No viewport has been saved. Calibration is required before GUI automation."
+            )
             return
         self.calibration_status.setText(
             f"Saved viewport: x={profile.x}, y={profile.y}, width={profile.width}, "
@@ -1120,7 +1187,9 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Could not clear calibration", str(exc))
             return
         self._show_calibration_status()
-        self.status_bar.showMessage("Calibration cleared; GUI automation is now blocked until recalibrated.")
+        self.status_bar.showMessage(
+            "Calibration cleared; GUI automation is now blocked until recalibrated."
+        )
 
     def _browse_tesseract(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -1137,7 +1206,9 @@ class MainWindow(QMainWindow):
 
         path = _find_tesseract(self.tesseract_edit.text())
         if path:
-            QMessageBox.information(self, "Tesseract available", f"Executable found:\n{path}")
+            QMessageBox.information(
+                self, "Tesseract available", f"Executable found:\n{path}"
+            )
         else:
             QMessageBox.warning(
                 self,
@@ -1174,13 +1245,19 @@ class MainWindow(QMainWindow):
     def _save_settings(self) -> None:
         self.settings.setValue("appearance/theme", str(self.theme_combo.currentData()))
         self.settings.setValue("ocr/tesseract_cmd", self.tesseract_edit.text().strip())
-        self.settings.setValue("diagnostics/directory", self.diagnostics_dir_edit.text().strip())
+        self.settings.setValue(
+            "diagnostics/directory", self.diagnostics_dir_edit.text().strip()
+        )
         self.settings.setValue("diagnostics/enabled", self.debug_checkbox.isChecked())
         self.settings.setValue("run/load_wait", self.load_wait_spin.value())
         self.settings.sync()
-        QApplication.instance().setStyleSheet(stylesheet(str(self.theme_combo.currentData())))
+        QApplication.instance().setStyleSheet(
+            stylesheet(str(self.theme_combo.currentData()))
+        )
         self.status_bar.showMessage("Preferences saved locally.")
-        QMessageBox.information(self, "Settings saved", "Your preferences were saved locally.")
+        QMessageBox.information(
+            self, "Settings saved", "Your preferences were saved locally."
+        )
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self._is_running():
