@@ -33,7 +33,7 @@ QFrame#HeroCard {
     border-radius: 16px;
 }
 QLabel#CardTitle { font-size: 15px; font-weight: 700; }
-QLabel#CardDescription, QLabel.muted { color: #A3ACBA; }
+QLabel#CardDescription, QLabel[class="muted"] { color: #A3ACBA; }
 QLabel#StatusPill {
     background: #252B37;
     border: 1px solid #3A4352;
@@ -118,7 +118,7 @@ QMainWindow, QWidget {
 QWidget#Sidebar { background: #FFFFFF; border-right: 1px solid #DDE2EB; }
 QLabel#BrandMark { background: #356DD5; color: #FFFFFF; border-radius: 10px; font-size: 17px; font-weight: 800; }
 QLabel#BrandTitle { font-size: 15px; font-weight: 700; }
-QLabel#BrandSubtitle, QLabel#PageSubtitle, QLabel.muted { color: #647084; }
+QLabel#BrandSubtitle, QLabel#PageSubtitle, QLabel#CardDescription, QLabel[class="muted"] { color: #647084; }
 QLabel#PageTitle { font-size: 25px; font-weight: 750; }
 QLabel#Eyebrow { color: #356DD5; font-size: 10px; font-weight: 800; letter-spacing: 1px; }
 QFrame#Card, QFrame.Card { background: #FFFFFF; border: 1px solid #DDE2EB; border-radius: 12px; }
