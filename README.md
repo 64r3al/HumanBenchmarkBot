@@ -76,6 +76,48 @@ Install Tesseract from the official [Tesseract OCR project](https://github.com/t
 
 ## Usage
 
+## Desktop UI (optional)
+
+The project includes an optional PySide6 desktop interface. It provides a dashboard, four game cards, run configuration, preview-only planning, preflight checks, viewport calibration, local settings, session logs, and a bounded local history.
+
+### Install and launch
+
+Install the GUI extra in the active virtual environment:
+
+```bash
+python -m pip install -e ".[ui]"
+python -m human_benchmark_bot.ui
+```
+
+Or use the installed entry point:
+
+```bash
+human-benchmark-bot-ui
+```
+
+The existing command-line interface remains available and does not require the GUI extra. To run tests and quality checks, install the development dependencies:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest
+ruff check .
+ruff format --check .
+```
+
+### Using the GUI safely
+
+1. Open **Calibration**, click **Capture screen and select viewport**, and drag a rectangle around the complete game area used by the selected routine.
+2. In **Run**, select one game, choose the interaction limit, and click **Run preflight**.
+3. Use **Preview only** to inspect the planned routine without opening a browser or sending desktop input.
+4. Start actual automation only after all blocking preflight checks pass and you explicitly acknowledge the safety confirmation.
+5. Keep the intended browser tab visible and do not use other desktop applications while a run is active. The **Request stop** action asks the routine to stop at its next cooperative cancellation checkpoint.
+
+The viewport is stored in the operating system's user configuration directory. It acts as a boundary guard for coordinates and screenshot regions; it does **not** automatically recalculate the routines' experimental reference points, correct browser zoom, or guarantee the expected browser window is focused. If the reference points do not fit the selected viewport, preflight blocks the run. Recalibrate whenever the display dimensions change.
+
+The GUI displays a run that returns without an uncaught error as **completed — review required**, not as proof of a verified game result. Current game routines remain experimental and require supervised real-browser validation. Clipboard access is checked when Number Memory runs; preflight does not read or overwrite the clipboard. Diagnostic screenshots are local and opt-in.
+
+Settings and history are stored locally. History contains only a limited session summary; it does not intentionally store displayed numbers or screenshots. No account, hosted backend, telemetry, or remote logging is required.
+
 ### Preview only (safe default)
 
 ```bash
