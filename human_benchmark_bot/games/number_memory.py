@@ -11,6 +11,7 @@ from ..automation import (
     AutomationError,
     DetectionTimeout,
     click_point,
+    clipboard_modifier,
     open_game,
     reference_point,
     save_diagnostic_screenshot,
