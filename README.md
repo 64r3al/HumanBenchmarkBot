@@ -2,7 +2,7 @@
 
 A Python desktop-automation prototype for selected [Human Benchmark](https://humanbenchmark.com/) mini-games. The project uses visible-screen detection, mouse/keyboard input, clipboard validation, and OCR. Its routines are experimental and may need recalibration when the website changes.
 
-> **Current version: 0.2.0 (hardening work in progress).** Passing unit tests does not prove that a routine works correctly on the live website. Each game needs supervised, real-browser testing before it should be considered reliable.
+> **Development version: 0.3.0 (desktop UI preview; not released).** Passing unit tests does not prove that a routine works correctly on the live website. Each game needs supervised, real-browser testing before it should be considered reliable.
 
 ## Safety first
 
