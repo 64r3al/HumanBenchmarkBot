@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from threading import Event
 
 import pyautogui
 from PIL import Image
@@ -10,7 +11,9 @@ from PIL import Image
 from ..automation import (
     AutomationError,
     DetectionTimeout,
+    check_cancelled,
     click_point,
+    interruptible_sleep,
     open_game,
     reference_point,
     reference_region,
@@ -41,8 +44,7 @@ def find_highlighted_cells(image: Image.Image) -> list[tuple[int, int]]:
     """Estimate highlighted tile centers from bright rectangular regions.
 
     The result contains centers relative to the supplied screenshot crop. This
-    conservative detector intentionally ignores tiny bright specks and returns
-    no cells when it cannot form plausible tile-sized regions.
+    heuristic is experimental; the live site's tile rendering may need recalibration.
     """
     if image.width < 1 or image.height < 1:
         return []
@@ -105,23 +107,34 @@ def _wait_for_cells(
     *,
     should_be_visible: bool,
     timeout: float,
+    cancel_event: Event | None = None,
 ) -> list[tuple[int, int]]:
-    """Wait for a plausible pattern to appear or disappear."""
+    """Wait for highlighted tiles to appear or to disappear stably.
+
+    When waiting for disappearance, return the last non-empty pattern observed
+    before three consecutive blank frames. This captures the latest revealed
+    pattern instead of reusing only the first partial frame.
+    """
     if timeout <= 0:
         raise ValueError("timeout must be positive.")
 
     deadline = time.monotonic() + timeout
     last_cells: list[tuple[int, int]] = []
+    empty_frames = 0
     while time.monotonic() < deadline:
+        check_cancelled(cancel_event)
         screenshot = pyautogui.screenshot(region=region)
         cells = find_highlighted_cells(screenshot)
         if should_be_visible and cells:
             return cells
-        if not should_be_visible and not cells:
-            return last_cells
         if cells:
             last_cells = cells
-        time.sleep(0.05)
+            empty_frames = 0
+        else:
+            empty_frames += 1
+            if not should_be_visible and empty_frames >= 3:
+                return last_cells
+        interruptible_sleep(0.05, cancel_event)
 
     state = "appear" if should_be_visible else "disappear"
     raise DetectionTimeout(
@@ -135,31 +148,34 @@ def run(
     *,
     debug: bool = False,
     diagnostics_dir: str = "diagnostics",
+    cancel_event: Event | None = None,
 ) -> None:
     """Replay detected tile patterns; abort when a visual transition is uncertain."""
     if rounds < 1:
         raise ValueError("rounds must be at least 1.")
 
-    open_game("Visual Memory", GAME_URLS["visual"], load_wait)
+    open_game("Visual Memory", GAME_URLS["visual"], load_wait, cancel_event=cancel_event)
     start_point = reference_point(960, 360)
     region = reference_region(596, 280, 700, 445)
     left, top, _, _ = region
 
-    click_point(start_point)
-    time.sleep(0.3)
+    click_point(start_point, cancel_event=cancel_event)
+    interruptible_sleep(0.3, cancel_event)
 
     for turn in range(1, rounds + 1):
         try:
-            cells = _wait_for_cells(
+            _wait_for_cells(
                 region,
                 should_be_visible=True,
                 timeout=8,
+                cancel_event=cancel_event,
             )
-            # Do not click while the reveal is still visible.
-            _wait_for_cells(
+            # Capture the latest visible pattern after the reveal has actually ended.
+            cells = _wait_for_cells(
                 region,
                 should_be_visible=False,
                 timeout=8,
+                cancel_event=cancel_event,
             )
         except DetectionTimeout:
             save_diagnostic_screenshot(
@@ -171,12 +187,14 @@ def run(
 
         if not cells:
             raise AutomationError(
-                "The detector returned no highlighted cells. Stopping safely."
+                "No highlighted tiles were detected before the reveal disappeared. "
+                "Stopping safely instead of guessing."
             )
 
         for relative_x, relative_y in cells:
-            click_point((left + relative_x, top + relative_y))
-            time.sleep(0.05)
+            check_cancelled(cancel_event)
+            click_point((left + relative_x, top + relative_y), cancel_event=cancel_event)
+            interruptible_sleep(0.05, cancel_event)
 
         print(
             f"Visual Memory: selected {len(cells)} detected tile(s) "
@@ -184,13 +202,13 @@ def run(
         )
 
         if turn < rounds:
-            # Require a blank transition before accepting another pattern so
-            # previously displayed cells are not immediately reused as new data.
+            # Require a blank transition before accepting another pattern.
             try:
                 _wait_for_cells(
                     region,
                     should_be_visible=False,
                     timeout=5,
+                    cancel_event=cancel_event,
                 )
             except DetectionTimeout:
                 save_diagnostic_screenshot(
