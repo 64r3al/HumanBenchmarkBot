@@ -26,6 +26,8 @@ def run(rounds: int = 20, load_wait: int = 5) -> None:
 
     for turn in range(1, rounds + 1):
         # The number is expected to be selectable text in the reference layout.
+        # Clear old clipboard data so a failed copy cannot reuse a prior answer.
+        pyperclip.copy("")
         pyautogui.click(*sample_point, clicks=3, interval=0.08)
         pyautogui.hotkey("ctrl", "c")
         number = pyperclip.paste().strip()
