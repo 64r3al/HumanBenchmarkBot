@@ -103,7 +103,7 @@ def test_diagnostic_screenshot_is_opt_in(
         )
         is None
     )
-    assert not tmp_path.exists()
+    assert list(tmp_path.iterdir()) == []
 
     destination = automation.save_diagnostic_screenshot(
         "failed state!", enabled=True, directory=tmp_path
