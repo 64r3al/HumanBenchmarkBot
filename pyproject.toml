@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "human-benchmark-bot"
+version = "0.1.0"
+description = "Experimental desktop automation routines for selected Human Benchmark mini-games."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+  { name = "64r3al" }
+]
+dependencies = [
+  "PyAutoGUI>=0.9.54",
+  "Pillow>=10.0.0",
+  "pytesseract>=0.3.10",
+  "pyperclip>=1.8.2",
+]
+
+[project.scripts]
+human-benchmark-bot = "human_benchmark_bot.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["human_benchmark_bot*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
