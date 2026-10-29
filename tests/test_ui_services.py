@@ -81,9 +81,31 @@ def test_preflight_gate_respects_blocking_checks() -> None:
 
 def test_history_store_is_bounded_and_does_not_store_answers(tmp_path) -> None:
     store = HistoryStore(tmp_path / "history.json", limit=2)
-    store.add({"game": "Reaction Time", "rounds": 5, "status": "completed_review", "elapsed_seconds": 4.1})
-    store.add({"game": "Number Memory", "rounds": 10, "status": "failed", "elapsed_seconds": 2.0, "answer": "123456"})
-    store.add({"game": "Visual Memory", "rounds": 4, "status": "cancelled", "elapsed_seconds": 1.0})
+    store.add(
+        {
+            "game": "Reaction Time",
+            "rounds": 5,
+            "status": "completed_review",
+            "elapsed_seconds": 4.1,
+        }
+    )
+    store.add(
+        {
+            "game": "Number Memory",
+            "rounds": 10,
+            "status": "failed",
+            "elapsed_seconds": 2.0,
+            "answer": "123456",
+        }
+    )
+    store.add(
+        {
+            "game": "Visual Memory",
+            "rounds": 4,
+            "status": "cancelled",
+            "elapsed_seconds": 1.0,
+        }
+    )
 
     rows = store.read()
     assert len(rows) == 2
