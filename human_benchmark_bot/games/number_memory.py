@@ -62,7 +62,9 @@ def run(
     if rounds < 1:
         raise ValueError("rounds must be at least 1.")
 
-    open_game("Number Memory", GAME_URLS["number"], load_wait, cancel_event=cancel_event)
+    open_game(
+        "Number Memory", GAME_URLS["number"], load_wait, cancel_event=cancel_event
+    )
     sample_point = reference_point(960, 360)
     start_point = reference_point(960, 460)
 
