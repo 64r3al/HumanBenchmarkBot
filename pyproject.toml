@@ -20,13 +20,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+ui = [
+  "PySide6>=6.7",
+]
 dev = [
   "pytest>=8.0",
   "ruff>=0.8",
+  "PySide6>=6.7",
 ]
 
 [project.scripts]
 human-benchmark-bot = "human_benchmark_bot.cli:main"
+human-benchmark-bot-ui = "human_benchmark_bot.ui.app:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
