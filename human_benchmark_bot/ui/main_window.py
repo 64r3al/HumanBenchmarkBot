@@ -760,7 +760,6 @@ class MainWindow(QMainWindow):
         key = self.game_combo.currentData()
         if key not in GAME_LABELS:
             return
-        current = self.rounds_spin.value()
         self.rounds_spin.setMaximum(MAX_ROUNDS[key])
         self.rounds_spin.setValue(DEFAULT_ROUNDS[key])
         self.game_description.setText(GAME_DESCRIPTIONS[key])
