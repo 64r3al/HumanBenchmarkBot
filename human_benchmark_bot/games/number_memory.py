@@ -11,7 +11,6 @@ from ..automation import (
     AutomationError,
     DetectionTimeout,
     click_point,
-    clipboard_modifier,
     open_game,
     reference_point,
     save_diagnostic_screenshot,
@@ -88,7 +87,7 @@ def run(
             )
 
         click_point(sample_point)
-        pyautogui.hotkey(clipboard_modifier(), "v")
+        pyautogui.write(number, interval=0.02)
         pyautogui.press("enter")
         print(f"Number Memory: submitted the copied value for round {turn}/{rounds}.")
 
