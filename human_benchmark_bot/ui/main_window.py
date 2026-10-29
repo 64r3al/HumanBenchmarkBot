@@ -1032,7 +1032,7 @@ class MainWindow(QMainWindow):
         message = str(result.get("message", "No details were returned."))
         self.elapsed_timer.stop()
         self.run_progress.setRange(0, 100)
-        self.run_progress.setValue(100 if status == "completed_review" else 0)
+        self.run_progress.setValue(0)
         self.run_status_label.setText(f"{status.replace('_', ' ').title()} · {message}")
         self._update_elapsed()
         self._append_log(
