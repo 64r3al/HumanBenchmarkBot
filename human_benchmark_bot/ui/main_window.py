@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QSettings, Qt, QRect, QSize, Signal
+from PySide6.QtCore import QSettings, Qt, QRect, QSize, Signal, QTimer
 from PySide6.QtGui import QCloseEvent, QImage, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPlainTextEdit,
+    QProgressBar,
     QPushButton,
     QScrollArea,
     QStatusBar,
@@ -249,6 +250,9 @@ class MainWindow(QMainWindow):
         self.pending_result: dict[str, Any] | None = None
         self.run_started_at = 0.0
         self.current_page = 0
+        self.elapsed_timer = QTimer(self)
+        self.elapsed_timer.setInterval(1000)
+        self.elapsed_timer.timeout.connect(self._update_elapsed)
 
         self.setWindowTitle("HumanBenchmarkBot")
         self.setMinimumSize(960, 680)
@@ -584,6 +588,24 @@ class MainWindow(QMainWindow):
         self.preflight_rows = QVBoxLayout()
         preflight_layout.addLayout(self.preflight_rows)
         layout.addWidget(preflight_card)
+
+        activity_card = _make_card()
+        activity_layout = QVBoxLayout(activity_card)
+        activity_layout.setContentsMargins(18, 18, 18, 18)
+        activity_title = QLabel("Run activity")
+        activity_title.setObjectName("CardTitle")
+        activity_layout.addWidget(activity_title)
+        self.run_status_label = QLabel("Idle · No automation is running.")
+        self.run_status_label.setWordWrap(True)
+        self.run_status_label.setObjectName("CardDescription")
+        activity_layout.addWidget(self.run_status_label)
+        self.run_progress = QProgressBar()
+        self.run_progress.setRange(0, 100)
+        self.run_progress.setValue(0)
+        activity_layout.addWidget(self.run_progress)
+        self.run_elapsed_label = _muted_label("Elapsed: 00:00:00")
+        activity_layout.addWidget(self.run_elapsed_label)
+        layout.addWidget(activity_card)
 
         log_card = _make_card()
         log_layout = QVBoxLayout(log_card)
@@ -924,6 +946,10 @@ class MainWindow(QMainWindow):
         self.current_config = config
         self.pending_result = None
         self.run_started_at = time.monotonic()
+        self.run_status_label.setText("Starting the selected routine…")
+        self.run_elapsed_label.setText("Elapsed: 00:00:00")
+        self.run_progress.setRange(0, 0)
+        self.elapsed_timer.start()
         self._append_log(
             "info", f"Starting {GAME_LABELS[config.game]}. Preflight passed."
         )
@@ -952,6 +978,9 @@ class MainWindow(QMainWindow):
         self.cancel_button.setEnabled(False)
         self.preflight_summary.setText(
             "Cancellation requested. The routine will stop at its next safe checkpoint."
+        )
+        self.run_status_label.setText(
+            "Cancellation requested · waiting for a safe checkpoint."
         )
         self._append_log(
             "warning", "Cancellation requested; waiting for a safe checkpoint."
@@ -997,6 +1026,13 @@ class MainWindow(QMainWindow):
                 )
         status = str(result.get("status", "unknown"))
         message = str(result.get("message", "No details were returned."))
+        self.elapsed_timer.stop()
+        self.run_progress.setRange(0, 100)
+        self.run_progress.setValue(100 if status == "completed_review" else 0)
+        self.run_status_label.setText(
+            f"{status.replace('_', ' ').title()} · {message}"
+        )
+        self._update_elapsed()
         self._append_log(
             "info" if status == "completed_review" else "warning",
             f"Run status: {status}. {message}",
@@ -1022,11 +1058,22 @@ class MainWindow(QMainWindow):
         self._refresh_dashboard()
         self._refresh_history()
 
+    def _update_elapsed(self) -> None:
+        """Update real elapsed time without inventing game-round progress."""
+        elapsed = max(0, int(time.monotonic() - self.run_started_at))
+        hours, remainder = divmod(elapsed, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        self.run_elapsed_label.setText(
+            f"Elapsed: {hours:02d}:{minutes:02d}:{seconds:02d}"
+        )
+
     def _append_log(self, level: str, message: str) -> None:
         timestamp = datetime.now().strftime("%H:%M:%S")
         safe_level = level.upper()
         self.session_log.appendPlainText(f"{timestamp}  [{safe_level}]  {message}")
         self.session_log.ensureCursorVisible()
+        if self._is_running():
+            self.run_status_label.setText(message)
 
     def _is_running(self) -> bool:
         return self.worker is not None and self.worker.isRunning()
