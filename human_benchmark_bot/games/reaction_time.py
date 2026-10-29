@@ -33,7 +33,9 @@ def run(
     if rounds < 1:
         raise ValueError("rounds must be at least 1.")
 
-    open_game("Reaction Time", GAME_URLS["reaction"], load_wait, cancel_event=cancel_event)
+    open_game(
+        "Reaction Time", GAME_URLS["reaction"], load_wait, cancel_event=cancel_event
+    )
     target = reference_point(960, 270)
 
     print(
