@@ -163,7 +163,9 @@ class SelectionLabel(QLabel):
 
     def mouseReleaseEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton and self._origin is not None:
-            self.selection = QRect(self._origin, event.position().toPoint()).normalized()
+            self.selection = QRect(
+                self._origin, event.position().toPoint()
+            ).normalized()
             self._rubber_band.setGeometry(self.selection)
             self._origin = None
             self.selectionChanged.emit()
@@ -986,7 +988,13 @@ class MainWindow(QMainWindow):
                 "rounds": config.rounds,
                 **result,
             }
-            self.history.add(entry)
+            try:
+                self.history.add(entry)
+            except (OSError, TypeError, ValueError) as exc:
+                self._append_log(
+                    "warning",
+                    f"Could not save local history: {exc}",
+                )
         status = str(result.get("status", "unknown"))
         message = str(result.get("message", "No details were returned."))
         self._append_log(
