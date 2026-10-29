@@ -52,7 +52,9 @@ def interruptible_sleep(seconds: float, cancel_event: Event | None = None) -> No
     check_cancelled(cancel_event)
     if cancel_event is not None:
         if cancel_event.wait(seconds):
-            raise RunCancelled("Run cancelled by the user. No further input will be sent.")
+            raise RunCancelled(
+                "Run cancelled by the user. No further input will be sent."
+            )
     else:
         time.sleep(seconds)
     check_cancelled(cancel_event)
