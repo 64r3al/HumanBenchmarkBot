@@ -7,11 +7,14 @@ from human_benchmark_bot.clipboard import wait_for_numeric_clipboard
 
 def test_wait_for_numeric_clipboard_returns_valid_number() -> None:
     values = iter(["", "old text", "  12345  "])
-    assert wait_for_numeric_clipboard(
-        lambda: next(values),
-        timeout=0.2,
-        poll_interval=0.001,
-    ) == "12345"
+    assert (
+        wait_for_numeric_clipboard(
+            lambda: next(values),
+            timeout=0.2,
+            poll_interval=0.001,
+        )
+        == "12345"
+    )
 
 
 def test_wait_for_numeric_clipboard_rejects_stale_or_non_numeric_values() -> None:
