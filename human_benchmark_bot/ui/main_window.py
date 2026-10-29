@@ -192,7 +192,9 @@ class SelectionLabel(QLabel):
 class SelectionDialog(QDialog):
     """Display an explicitly requested screenshot and collect a viewport region."""
 
-    def __init__(self, pixmap: QPixmap, original_size: QSize, parent: QWidget | None = None):
+    def __init__(
+        self, pixmap: QPixmap, original_size: QSize, parent: QWidget | None = None
+    ):
         super().__init__(parent)
         self.setWindowTitle("Select the game viewport")
         self.setModal(True)
@@ -842,7 +844,9 @@ class MainWindow(QMainWindow):
             debug=self.debug_checkbox.isChecked(),
             tesseract_cmd=self.settings.value("ocr/tesseract_cmd", "", type=str),
             diagnostics_dir=self.settings.value(
-                "diagnostics/directory", str(config_directory() / "diagnostics"), type=str
+                "diagnostics/directory",
+                str(config_directory() / "diagnostics"),
+                type=str,
             ),
         )
         validate_run_config(config)
