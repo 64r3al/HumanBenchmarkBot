@@ -10,9 +10,8 @@ from ..automation import (
     reference_point,
     save_diagnostic_screenshot,
     wait_for_color,
-    wait_for_color_change,
 )
-from ..config import GAME_URLS, REACTION_GREEN
+from ..config import GAME_URLS, REACTION_GREEN, REACTION_RESULT_BLUE
 
 
 def run(
@@ -58,9 +57,9 @@ def run(
             )
 
         click_point(target)
-        if not wait_for_color_change(
+        if not wait_for_color(
             target,
-            REACTION_GREEN,
+            REACTION_RESULT_BLUE,
             timeout=5,
             tolerance=24,
         ):
@@ -70,8 +69,8 @@ def run(
                 directory=diagnostics_dir,
             )
             raise AutomationError(
-                f"Trial {turn}/{rounds}: the green state did not change after "
-                "the click. Stopping instead of risking extra clicks."
+                f"Trial {turn}/{rounds}: the expected result screen was not "
+                "detected after the click. Stopping instead of risking extra clicks."
             )
 
         print(f"Reaction Time: interaction {turn}/{rounds} completed.")

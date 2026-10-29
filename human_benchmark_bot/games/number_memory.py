@@ -18,7 +18,7 @@ from ..automation import (
     wait_for_color,
 )
 from ..clipboard import wait_for_numeric_clipboard
-from ..config import GAME_URLS, NUMBER_INPUT_BLUE
+from ..config import GAME_URLS, NUMBER_INPUT_BLUE, NUMBER_READY_BLUE
 
 
 def _copy_displayed_number(sample_point: tuple[int, int]) -> str:
@@ -57,6 +57,22 @@ def run(
     sample_point = reference_point(960, 360)
     start_point = reference_point(960, 460)
 
+    if not wait_for_color(
+        sample_point,
+        NUMBER_READY_BLUE,
+        timeout=15,
+        tolerance=25,
+    ):
+        save_diagnostic_screenshot(
+            "number-start-screen-not-detected",
+            enabled=debug,
+            directory=diagnostics_dir,
+        )
+        raise DetectionTimeout(
+            "The Number Memory start screen was not detected. Check the "
+            "browser tab, display layout, and observed UI colors."
+        )
+
     click_point(start_point)
     time.sleep(0.35)
 
@@ -93,10 +109,23 @@ def run(
         print(f"Number Memory: submitted the copied value for round {turn}/{rounds}.")
 
         if turn < rounds:
-            # Start the next level only after the result transition has had time
-            # to render. If the expected button location is wrong, stop testing
-            # instead of relying on an unlimited series of clicks.
-            time.sleep(0.35)
+            # Wait for the known ready-screen color before clicking the next-level
+            # button. If the game ended or the layout changed, stop safely.
+            if not wait_for_color(
+                sample_point,
+                NUMBER_READY_BLUE,
+                timeout=8,
+                tolerance=25,
+            ):
+                save_diagnostic_screenshot(
+                    "number-next-level-not-detected",
+                    enabled=debug,
+                    directory=diagnostics_dir,
+                )
+                raise DetectionTimeout(
+                    f"Round {turn}/{rounds}: the next-level screen was not "
+                    "detected after submitting the answer."
+                )
             click_point(start_point)
             time.sleep(0.35)
 

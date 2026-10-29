@@ -13,7 +13,9 @@ REFERENCE_SIZE = (1920, 1080)
 # RGB values observed in the older reference UI. A changed website may need
 # recalibration; detection is deliberately conservative and stops on timeout.
 REACTION_GREEN = (24, 217, 113)
+REACTION_RESULT_BLUE = (0, 137, 206)
 NUMBER_INPUT_BLUE = (0, 110, 165)
+NUMBER_READY_BLUE = (0, 137, 206)
 
 DEFAULT_ROUNDS = {
     "reaction": 5,
