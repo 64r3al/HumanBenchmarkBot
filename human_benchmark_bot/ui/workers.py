@@ -9,6 +9,7 @@ from typing import Any
 
 from PySide6.QtCore import QThread, Signal
 
+from ..automation import RunCancelled
 from .services import RunConfig, run_game
 
 
@@ -76,11 +77,10 @@ class RunWorker(QThread):
                 self.cancelled.emit(str(result.get("message", "Run cancelled.")))
             else:
                 self.result_ready.emit(result)
+        except RunCancelled as exc:
+            self.cancelled.emit(str(exc) or "Run cancelled at a safe checkpoint.")
         except Exception as exc:
-            if exc.__class__.__name__ == "RunCancelled" or self.cancel_event.is_set():
-                self.cancelled.emit(str(exc) or "Run cancelled at a safe checkpoint.")
-            else:
-                self.error.emit(f"{exc.__class__.__name__}: {exc}")
+            self.error.emit(f"{exc.__class__.__name__}: {exc}")
         finally:
             writer.flush()
 
