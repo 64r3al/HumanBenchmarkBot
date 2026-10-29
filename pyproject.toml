@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "human-benchmark-bot"
-version = "0.1.0"
-description = "Experimental desktop automation routines for selected Human Benchmark mini-games."
+version = "0.2.0"
+description = "Experimental, safety-gated desktop automation routines for selected Human Benchmark mini-games."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
@@ -19,6 +19,12 @@ dependencies = [
   "pyperclip>=1.8.2",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.8",
+]
+
 [project.scripts]
 human-benchmark-bot = "human_benchmark_bot.cli:main"
 
@@ -28,3 +34,11 @@ include = ["human_benchmark_bot*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]

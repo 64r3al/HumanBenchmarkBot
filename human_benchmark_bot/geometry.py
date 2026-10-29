@@ -1,4 +1,4 @@
-"""Pure helpers for scaling coordinates from the reference screen layout."""
+"""Pure helpers for scaling coordinates from a reference screen layout."""
 
 from __future__ import annotations
 
@@ -37,10 +37,9 @@ def scaled_region(
     """Scale a screenshot region from reference coordinates to screen pixels."""
     if width <= 0 or height <= 0:
         raise ValueError("Region width and height must be positive.")
+
     left, top = scaled_point(x, y, screen_size, reference_size)
-    right, bottom = scaled_point(
-        x + width, y + height, screen_size, reference_size
-    )
+    right, bottom = scaled_point(x + width, y + height, screen_size, reference_size)
     region_width = right - left
     region_height = bottom - top
     if region_width <= 0 or region_height <= 0:

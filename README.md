@@ -1,26 +1,37 @@
 # HumanBenchmarkBot
 
-A Python desktop-automation prototype for selected [Human Benchmark](https://humanbenchmark.com/) mini-games. It opens the game in your browser and uses screen pixels, mouse/keyboard input, and OCR to automate the interaction.
+A Python desktop-automation prototype for selected [Human Benchmark](https://humanbenchmark.com/) mini-games. The project uses visible-screen detection, mouse/keyboard input, clipboard validation, and OCR. Its routines are experimental and may need recalibration when the website changes.
 
-> **Status: experimental baseline (v0.1.0).** The website's layout and behavior can change. The included coordinate-based routines are a starting point for testing and improvement, not a guarantee of reliable results on every browser, screen size, or game version.
+> **Current version: 0.2.0 (hardening work in progress).** Passing unit tests does not prove that a routine works correctly on the live website. Each game needs supervised, real-browser testing before it should be considered reliable.
 
-## Current game routines
+## Safety first
 
-| Game | Command name | Method |
-|---|---|---|
-| Reaction Time | `reaction` | Waits for the green state and clicks |
-| Number Memory | `number` | Copies the displayed number, then submits it |
-| Verbal Memory | `verbal` | Reads the displayed word with Tesseract OCR and tracks previously seen words |
-| Visual Memory | `visual` | Attempts to detect highlighted tiles in a screenshot and clicks their centers |
+**The default command is preview-only.** It does not open a browser, move the mouse, press keys, or access the clipboard.
 
-The initial coordinate map is calibrated around a **1920 × 1080** display. Other resolutions are scaled proportionally, but browser zoom, browser chrome, page layout, display scaling, and the game's current UI can still affect detection.
+- Actual desktop automation requires the explicit `--allow-input` flag and an interactive confirmation.
+- Keep the Human Benchmark tab visible and active. Browser layout, zoom, display scaling, and other open windows can still affect coordinates.
+- PyAutoGUI's emergency fail-safe remains enabled. Moving the pointer to the top-left corner of the primary display should stop input actions.
+- The bot can click/type into whichever window is active. No software-only safeguard can guarantee that an unintended click will never reach another application. Close unsaved work and do not use the computer for other tasks while it runs.
+- Diagnostic screenshots are disabled by default. Use `--debug` only when needed; screenshots can contain anything visible on the desktop.
+- Do not use the project to misrepresent automated results as human performance, evade safeguards, or submit misleading scores. Follow the website's current terms.
+
+## Current routines
+
+| Game | Command | Method | Status |
+|---|---|---|---|
+| Reaction Time | `reaction` | Polls a screen pixel for the green state and checks that it changes after a click. | Experimental; live testing required |
+| Number Memory | `number` | Selects and copies the displayed number, validates the clipboard, then submits it. | Experimental; depends on text selection |
+| Verbal Memory | `verbal` | Reads the displayed word with confidence-checked Tesseract OCR and tracks seen words. | Experimental; OCR and end-state detection need live validation |
+| Visual Memory | `visual` | Detects bright tile regions from screenshots and waits for visual transitions. | Experimental; requires grid/layout validation |
+
+The initial coordinate map is based on a 1920 × 1080 reference layout. Coordinate scaling alone does not compensate for browser chrome, zoom, display scaling, page layout, or changes to the game's UI.
 
 ## Requirements
 
 - Python 3.10 or newer
 - A desktop session with a visible browser and mouse/keyboard control
-- Tesseract OCR installed and available on your `PATH` for the Verbal Memory routine
-- Clipboard support for the Number Memory routine
+- Tesseract OCR installed separately for Verbal Memory
+- Clipboard support for Number Memory
 
 ## Installation
 
@@ -31,7 +42,7 @@ git clone https://github.com/64r3al/HumanBenchmarkBot.git
 cd HumanBenchmarkBot
 ```
 
-### 2. Create and activate a virtual environment
+### 2. Create a virtual environment
 
 **Windows (PowerShell):**
 
@@ -44,7 +55,7 @@ py -m venv .venv
 
 ```bat
 py -m venv .venv
-.venv\Scripts\activate.bat
+.\.venv\Scripts\activate.bat
 ```
 
 **macOS / Linux:**
@@ -58,26 +69,42 @@ source .venv/bin/activate
 
 ```bash
 python -m pip install --upgrade pip
-python -m pip install -e .
+python -m pip install -e ".[dev]"
 ```
 
-Install Tesseract separately from the official [Tesseract OCR project](https://github.com/tesseract-ocr/tesseract). If the executable is not on your `PATH`, pass its full path using `--tesseract-cmd`.
+Install Tesseract from the official [Tesseract OCR project](https://github.com/tesseract-ocr/tesseract). If it is not on your `PATH`, provide its executable path using `--tesseract-cmd`.
 
 ## Usage
 
-Run one game:
+### Preview only (safe default)
 
 ```bash
 python -m human_benchmark_bot --game reaction
-python -m human_benchmark_bot --game number --rounds 20
-python -m human_benchmark_bot --game verbal --rounds 100
-python -m human_benchmark_bot --game visual --rounds 15
+python -m human_benchmark_bot --game all --dry-run
 ```
 
-Run all four routines sequentially:
+Preview mode prints the planned game and round count. It does not open a browser or control desktop input.
+
+### Enable actual desktop input
+
+Run this in an interactive terminal. The program asks for confirmation before starting.
 
 ```bash
-python -m human_benchmark_bot --game all
+python -m human_benchmark_bot --game reaction --allow-input
+```
+
+Other examples:
+
+```bash
+python -m human_benchmark_bot --game number --rounds 20 --allow-input
+python -m human_benchmark_bot --game verbal --rounds 100 --allow-input
+python -m human_benchmark_bot --game visual --rounds 15 --allow-input
+```
+
+Use a custom Tesseract path:
+
+```bash
+python -m human_benchmark_bot --game verbal --tesseract-cmd "C:\Program Files\Tesseract-OCR\tesseract.exe" --allow-input
 ```
 
 Show all options:
@@ -86,47 +113,40 @@ Show all options:
 python -m human_benchmark_bot --help
 ```
 
-The browser opens automatically. Keep the game tab visible and focused during automation. Use `--load-wait` to change the default browser-loading countdown (in seconds).
+Each game has a bounded maximum run length. If a visual state or OCR result is ambiguous, the routine should stop instead of continuing blindly.
 
-Example with a custom Tesseract path:
+## Debugging and diagnostics
+
+Use `--debug` to save a screenshot when a supported detection failure occurs:
 
 ```bash
-python -m human_benchmark_bot --game verbal --tesseract-cmd "C:\Program Files\Tesseract-OCR\tesseract.exe"
+python -m human_benchmark_bot --game reaction --allow-input --debug
 ```
 
-## Safety and responsible use
+Diagnostic images are written to `diagnostics/` by default and are ignored by Git. Inspect them before sharing; they may contain unrelated desktop content. The debug flag is opt-in and is not required for normal runs.
 
-- Use this project only for personal testing, learning, or other activity permitted by the website.
-- Automated play may conflict with a website's rules or undermine the purpose of a human-performance benchmark. Do not use it to misrepresent human results, evade safeguards, or gain an unfair advantage in a competition.
-- PyAutoGUI's fail-safe is enabled: moving the pointer to the **top-left corner** of the primary screen aborts automation.
-- Do not use your computer for other input-driven tasks while the bot is running.
-- This project does not ask for, collect, or store your Human Benchmark account credentials.
+## Tests and development
 
-## Troubleshooting
-
-**The script cannot detect a game state.** Make sure the browser is focused, the game is fully loaded, the page is at a supported zoom level, and the display is close to the reference layout. The site's colors and layout may have changed; detection constants are intentionally centralized so they can be tuned during development.
-
-**Verbal Memory reports a Tesseract error.** Install Tesseract separately and ensure `tesseract` works from a terminal, or provide `--tesseract-cmd`.
-
-**Number Memory cannot copy a number.** Make sure clipboard access works in your desktop session and that the game's number is selectable. This routine depends on browser selection behavior and may need an update.
-
-**Visual Memory detects no tiles or clicks the wrong cells.** Tile detection is experimental and sensitive to the rendered colors and game layout. Stop the run instead of treating a failed detection as a valid result.
-
-## Development
-
-Install the project in editable mode as shown above. Run the lightweight test suite with:
+Install development dependencies with:
 
 ```bash
-python -m pip install pytest
+python -m pip install -e ".[dev]"
 python -m pytest
+ruff check .
+ruff format --check .
 ```
 
-The GitHub Actions workflow also performs a Python syntax/bytecode compilation check on pushes and pull requests.
+GitHub Actions checks syntax, lint, formatting, and unit tests on Python 3.10–3.13. Tests mock desktop interactions or use synthetic images; they do not interact with the live website. A successful CI run is therefore not proof of real-browser reliability.
 
-## Project scope
+## Known limitations
 
-This repository starts with a small, readable baseline so each game routine can be tested and improved independently. Future work can focus on more reliable UI detection, safer state transitions, automated tests, and better cross-resolution support.
+- Screen coordinates and observed pixel colors can become stale when the website changes.
+- Number Memory depends on selectable text and clipboard behavior.
+- Verbal Memory depends on Tesseract's English model and OCR confidence.
+- Visual Memory's bright-tile detector is heuristic; synthetic tests cover only the cases represented in the test suite.
+- Browser focus and desktop interaction are not fully controllable by the application.
+- No live-browser acceptance test has been performed as part of this release.
 
-## Disclaimer
+## Project scope and disclaimer
 
-Human Benchmark is a third-party website. This is an independent community project and is not affiliated with, endorsed by, or sponsored by Human Benchmark.
+This is an independent experimental project. Human Benchmark is a third-party website; this repository is not affiliated with, endorsed by, or sponsored by Human Benchmark. Use the site and this project responsibly and in accordance with the site's current terms.
