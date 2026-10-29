@@ -315,7 +315,7 @@ class MainWindow(QMainWindow):
             )
         )
         side_layout.addWidget(safety_card)
-        version = QLabel("v0.2.0 · experimental")
+        version = QLabel("v0.3.0 · experimental")
         version.setObjectName("BrandSubtitle")
         side_layout.addWidget(version)
         root.addWidget(sidebar)
