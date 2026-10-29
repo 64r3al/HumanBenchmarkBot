@@ -130,11 +130,7 @@ def build_preflight(config: RunConfig) -> list[PreflightCheck]:
     try:
         validate_run_config(config)
     except ValueError as exc:
-        return [
-            PreflightCheck(
-                "Run configuration", "failed", str(exc), blocking=True
-            )
-        ]
+        return [PreflightCheck("Run configuration", "failed", str(exc), blocking=True)]
 
     checks.append(
         PreflightCheck(
@@ -334,7 +330,8 @@ def run_game(
         rounds=config.rounds,
         load_wait=config.load_wait,
         debug=config.debug,
-        diagnostics_dir=config.diagnostics_dir or str(config_directory() / "diagnostics"),
+        diagnostics_dir=config.diagnostics_dir
+        or str(config_directory() / "diagnostics"),
         cancel_event=cancel_event,
     )
     elapsed = time.monotonic() - started
