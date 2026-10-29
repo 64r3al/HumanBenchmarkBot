@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QSettings, Qt, QRect, QSize
+from PySide6.QtCore import QSettings, Qt, QRect, QSize, Signal
 from PySide6.QtGui import QCloseEvent, QImage, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
@@ -28,7 +28,6 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QSpinBox,
     QStackedWidget,
-    QStatusBar,
     QVBoxLayout,
     QWidget,
     QRubberBand,
@@ -41,7 +40,7 @@ from ..calibration import (
     load_calibration,
     save_calibration,
 )
-from ..config import DEFAULT_LOAD_WAIT, DEFAULT_ROUNDS, GAME_URLS, MAX_LOAD_WAIT, MAX_ROUNDS
+from ..config import DEFAULT_LOAD_WAIT, DEFAULT_ROUNDS, MAX_LOAD_WAIT, MAX_ROUNDS
 from .services import (
     GAME_DESCRIPTIONS,
     GAME_LABELS,
@@ -130,6 +129,8 @@ class SafetyDialog(QDialog):
 class SelectionLabel(QLabel):
     """Pixmap label allowing a user to select a rectangular viewport."""
 
+    selectionChanged = Signal()
+
     def __init__(self, pixmap: QPixmap, original_size: QSize, parent: QWidget | None = None):
         super().__init__(parent)
         self.setPixmap(pixmap)
@@ -160,6 +161,7 @@ class SelectionLabel(QLabel):
             self.selection = QRect(self._origin, event.position().toPoint()).normalized()
             self._rubber_band.setGeometry(self.selection)
             self._origin = None
+            self.selectionChanged.emit()
         super().mouseReleaseEvent(event)
 
     def selection_in_screen_coordinates(self) -> tuple[int, int, int, int]:
@@ -211,17 +213,13 @@ class SelectionDialog(QDialog):
         layout.addLayout(buttons)
         cancel.clicked.connect(self.reject)
         self.save_button.clicked.connect(self._accept_selection)
-        self.image_label.installEventFilter(self)
+        self.image_label.selectionChanged.connect(self._update_save_button)
 
-    def eventFilter(self, watched, event) -> bool:
-        from PySide6.QtCore import QEvent
-
-        if watched is self.image_label and event.type() == QEvent.Type.MouseButtonRelease:
-            self.save_button.setEnabled(
-                self.image_label.selection.width() >= 80
-                and self.image_label.selection.height() >= 80
-            )
-        return super().eventFilter(watched, event)
+    def _update_save_button(self) -> None:
+        self.save_button.setEnabled(
+            self.image_label.selection.width() >= 80
+            and self.image_label.selection.height() >= 80
+        )
 
     def _accept_selection(self) -> None:
         try:
@@ -543,6 +541,7 @@ class MainWindow(QMainWindow):
         actions.addWidget(self.preview_button)
         actions.addWidget(self.start_button)
         actions.addWidget(self.cancel_button)
+        self.start_button.setEnabled(False)
         config_layout.addLayout(actions)
         layout.addWidget(config_card)
 
@@ -763,10 +762,11 @@ class MainWindow(QMainWindow):
             return
         current = self.rounds_spin.value()
         self.rounds_spin.setMaximum(MAX_ROUNDS[key])
-        self.rounds_spin.setValue(min(DEFAULT_ROUNDS[key], current) if current > 0 else DEFAULT_ROUNDS[key])
+        self.rounds_spin.setValue(DEFAULT_ROUNDS[key])
         self.game_description.setText(GAME_DESCRIPTIONS[key])
         self.preflight_summary.setText("Run preflight after selecting the game and settings.")
         self._clear_preflight_rows()
+        self.start_button.setEnabled(False)
 
     def _read_config(self) -> RunConfig:
         config = RunConfig(
@@ -950,7 +950,7 @@ class MainWindow(QMainWindow):
         self.load_wait_spin.setEnabled(True)
         self.debug_checkbox.setEnabled(True)
         self.cancel_button.setEnabled(False)
-        self.start_button.setEnabled(True)
+        self.start_button.setEnabled(False)
         self._refresh_dashboard()
         self._refresh_history()
 
