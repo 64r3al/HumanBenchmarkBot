@@ -91,7 +91,7 @@ The browser opens automatically. Keep the game tab visible and focused during au
 Example with a custom Tesseract path:
 
 ```bash
-python -m human_benchmark_bot --game verbal --tesseract-cmd "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+python -m human_benchmark_bot --game verbal --tesseract-cmd "C:\Program Files\Tesseract-OCR\tesseract.exe"
 ```
 
 ## Safety and responsible use
