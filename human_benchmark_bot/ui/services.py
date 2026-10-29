@@ -6,28 +6,21 @@ import importlib
 import importlib.util
 import json
 import shutil
-import sys
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Event
-from typing import Any
+from typing import Any, Callable
 
 from ..calibration import (
     CalibrationError,
-    calibration_path,
     config_directory,
     load_calibration,
     validate_current_display,
 )
-from ..config import (
-    DEFAULT_LOAD_WAIT,
-    DEFAULT_ROUNDS,
-    GAME_URLS,
-    MAX_LOAD_WAIT,
-    MAX_ROUNDS,
-)
+from ..config import DEFAULT_LOAD_WAIT, GAME_URLS, MAX_LOAD_WAIT, MAX_ROUNDS
+from ..geometry import scaled_point, scaled_region
 
 GAME_MODULES = {
     "reaction": ".games.reaction_time",
@@ -46,6 +39,16 @@ GAME_DESCRIPTIONS = {
     "number": "Read and submit the displayed number using the configured extraction method.",
     "verbal": "Use Tesseract OCR to read displayed words and classify repeated words.",
     "visual": "Detect highlighted tile patterns and attempt to reproduce them.",
+}
+GAME_POINTS = {
+    "reaction": ((960, 270),),
+    "number": ((960, 360), (960, 460)),
+    "verbal": ((951, 507), (870, 446), (1038, 444)),
+    "visual": ((960, 360),),
+}
+GAME_REGIONS = {
+    "verbal": ((590, 292, 690, 75),),
+    "visual": ((596, 280, 700, 445),),
 }
 
 
@@ -80,7 +83,9 @@ def validate_run_config(config: RunConfig) -> None:
             f"{MAX_ROUNDS[config.game]}."
         )
     if not 0 <= config.load_wait <= MAX_LOAD_WAIT:
-        raise ValueError(f"Browser countdown must be between 0 and {MAX_LOAD_WAIT} seconds.")
+        raise ValueError(
+            f"Browser countdown must be between 0 and {MAX_LOAD_WAIT} seconds."
+        )
 
 
 def _find_tesseract(custom_path: str = "") -> str | None:
@@ -91,6 +96,31 @@ def _find_tesseract(custom_path: str = "") -> str | None:
             return str(candidate)
         return shutil.which(custom_path.strip())
     return shutil.which("tesseract")
+
+
+def _geometry_fits_viewport(game: str, profile, screen_size: tuple[int, int]) -> bool:
+    """Verify fixed reference points and screenshot regions fit inside the saved viewport."""
+    screen_width, screen_height = screen_size
+    points = [scaled_point(x, y, screen_size) for x, y in GAME_POINTS[game]]
+    for x, y in points:
+        if not (profile.x <= x < profile.right and profile.y <= y < profile.bottom):
+            return False
+    for x, y, width, height in GAME_REGIONS.get(game, ()):
+        left, top, region_width, region_height = scaled_region(
+            x, y, width, height, screen_size
+        )
+        if (
+            left < profile.x
+            or top < profile.y
+            or left + region_width > profile.right
+            or top + region_height > profile.bottom
+            or left < 0
+            or top < 0
+            or left + region_width > screen_width
+            or top + region_height > screen_height
+        ):
+            return False
+    return True
 
 
 def build_preflight(config: RunConfig) -> list[PreflightCheck]:
@@ -118,6 +148,7 @@ def build_preflight(config: RunConfig) -> list[PreflightCheck]:
         screen_width, screen_height = pyautogui.size()
         if screen_width <= 0 or screen_height <= 0:
             raise RuntimeError("The operating system returned invalid display dimensions.")
+        screen_size = (screen_width, screen_height)
         checks.append(
             PreflightCheck(
                 "Display",
@@ -127,6 +158,7 @@ def build_preflight(config: RunConfig) -> list[PreflightCheck]:
         )
     except Exception as exc:
         screen_width = screen_height = 0
+        screen_size = (0, 0)
         checks.append(
             PreflightCheck(
                 "Display",
@@ -157,6 +189,24 @@ def build_preflight(config: RunConfig) -> list[PreflightCheck]:
                     "matches the current display.",
                 )
             )
+            if _geometry_fits_viewport(config.game, profile, screen_size):
+                checks.append(
+                    PreflightCheck(
+                        "Reference geometry",
+                        "passed",
+                        "The current game points and screenshot regions fit inside the saved viewport.",
+                    )
+                )
+            else:
+                checks.append(
+                    PreflightCheck(
+                        "Reference geometry",
+                        "failed",
+                        "One or more fixed reference points or screenshot regions fall outside the viewport. "
+                        "Select a larger viewport or use a compatible layout.",
+                        blocking=True,
+                    )
+                )
         else:
             checks.append(
                 PreflightCheck(
@@ -253,7 +303,7 @@ def build_preview(config: RunConfig) -> str:
 def run_game(
     config: RunConfig,
     cancel_event: Event,
-    log_callback,
+    log_callback: Callable[[str, str], None],
 ) -> dict[str, Any]:
     """Execute one existing routine and return an honest run summary."""
     validate_run_config(config)
@@ -270,6 +320,8 @@ def run_game(
         "info",
         f"Starting {GAME_LABELS[config.game]} with a configured limit of {config.rounds}.",
     )
+    import time
+
     started = time.monotonic()
     module.run(
         rounds=config.rounds,
