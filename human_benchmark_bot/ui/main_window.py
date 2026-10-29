@@ -1188,6 +1188,15 @@ class MainWindow(QMainWindow):
         )
 
     def _clear_calibration(self) -> None:
+        reply = QMessageBox.question(
+            self,
+            "Clear calibration",
+            "Remove the saved viewport? GUI automation will remain blocked until you calibrate again.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
         path = calibration_path()
         try:
             path.unlink(missing_ok=True)
@@ -1239,8 +1248,8 @@ class MainWindow(QMainWindow):
         import sys
 
         path = Path(self.diagnostics_dir_edit.text()).expanduser()
-        path.mkdir(parents=True, exist_ok=True)
         try:
+            path.mkdir(parents=True, exist_ok=True)
             if sys.platform.startswith("win"):
                 os.startfile(str(path))  # type: ignore[attr-defined]
             elif sys.platform == "darwin":
