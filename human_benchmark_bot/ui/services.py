@@ -131,7 +131,9 @@ def build_preflight(config: RunConfig) -> list[PreflightCheck]:
         validate_run_config(config)
     except ValueError as exc:
         return [
-            PreflightCheck("Run configuration", "failed", str(exc), blocking=True)
+            PreflightCheck(
+                "Run configuration", "failed", str(exc), blocking=True
+            )
         ]
 
     checks.append(
@@ -148,7 +150,9 @@ def build_preflight(config: RunConfig) -> list[PreflightCheck]:
 
         screen_width, screen_height = pyautogui.size()
         if screen_width <= 0 or screen_height <= 0:
-            raise RuntimeError("The operating system returned invalid display dimensions.")
+            raise RuntimeError(
+                "The operating system returned invalid display dimensions."
+            )
         screen_size = (screen_width, screen_height)
         checks.append(
             PreflightCheck(
@@ -226,7 +230,9 @@ def build_preflight(config: RunConfig) -> list[PreflightCheck]:
         executable = _find_tesseract(config.tesseract_cmd)
         if executable:
             checks.append(
-                PreflightCheck("Tesseract OCR", "passed", f"Executable found at {executable}.")
+                PreflightCheck(
+                    "Tesseract OCR", "passed", f"Executable found at {executable}."
+                )
             )
         else:
             checks.append(
@@ -316,7 +322,9 @@ def run_game(
 
         pytesseract.pytesseract.tesseract_cmd = config.tesseract_cmd.strip()
 
-    module = importlib.import_module(GAME_MODULES[config.game], package="human_benchmark_bot")
+    module = importlib.import_module(
+        GAME_MODULES[config.game], package="human_benchmark_bot"
+    )
     log_callback(
         "info",
         f"Starting {GAME_LABELS[config.game]} with a configured limit of {config.rounds}.",
@@ -332,7 +340,9 @@ def run_game(
     elapsed = time.monotonic() - started
     if cancel_event.is_set():
         status = "cancelled"
-        message = "Cancellation was requested; the routine returned at a safe checkpoint."
+        message = (
+            "Cancellation was requested; the routine returned at a safe checkpoint."
+        )
     else:
         status = "completed_review"
         message = (
