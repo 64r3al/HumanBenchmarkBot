@@ -154,7 +154,9 @@ def run(
     if rounds < 1:
         raise ValueError("rounds must be at least 1.")
 
-    open_game("Visual Memory", GAME_URLS["visual"], load_wait, cancel_event=cancel_event)
+    open_game(
+        "Visual Memory", GAME_URLS["visual"], load_wait, cancel_event=cancel_event
+    )
     start_point = reference_point(960, 360)
     region = reference_region(596, 280, 700, 445)
     left, top, _, _ = region
@@ -193,7 +195,9 @@ def run(
 
         for relative_x, relative_y in cells:
             check_cancelled(cancel_event)
-            click_point((left + relative_x, top + relative_y), cancel_event=cancel_event)
+            click_point(
+                (left + relative_x, top + relative_y), cancel_event=cancel_event
+            )
             interruptible_sleep(0.05, cancel_event)
 
         print(
