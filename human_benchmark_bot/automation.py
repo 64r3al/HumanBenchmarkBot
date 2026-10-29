@@ -8,16 +8,17 @@ import webbrowser
 from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
+from threading import Event
 from typing import TypeAlias
 
 import pyautogui
 
+from .calibration import CalibrationError, load_calibration, validate_current_display
 from .geometry import Point, Region, scaled_point, scaled_region
 
 RGB: TypeAlias = tuple[int, int, int]
 
-# Keep PyAutoGUI's built-in emergency stop enabled and insert a small pause
-# between input actions. Do not disable FAILSAFE in this project.
+# Keep PyAutoGUI's built-in emergency stop enabled and insert a small pause.
 pyautogui.FAILSAFE = True
 pyautogui.PAUSE = 0.05
 
@@ -34,6 +35,40 @@ class GameEnded(AutomationError):
     """Raised when a routine detects that the game has already ended."""
 
 
+class RunCancelled(AutomationError):
+    """Raised when the user requests cancellation between safe checkpoints."""
+
+
+def check_cancelled(cancel_event: Event | None = None) -> None:
+    """Raise RunCancelled when a cooperative cancellation was requested."""
+    if cancel_event is not None and cancel_event.is_set():
+        raise RunCancelled("Run cancelled by the user. No further input will be sent.")
+
+
+def interruptible_sleep(seconds: float, cancel_event: Event | None = None) -> None:
+    """Sleep while remaining responsive to cooperative cancellation."""
+    if seconds < 0:
+        raise ValueError("seconds must be zero or greater.")
+    check_cancelled(cancel_event)
+    if cancel_event is not None:
+        if cancel_event.wait(seconds):
+            raise RunCancelled("Run cancelled by the user. No further input will be sent.")
+    else:
+        time.sleep(seconds)
+    check_cancelled(cancel_event)
+
+
+def _calibration_for_display(screen_width: int, screen_height: int):
+    """Load a calibration if configured and ensure it matches this display."""
+    try:
+        profile = load_calibration()
+        if profile is not None:
+            validate_current_display(profile, screen_width, screen_height)
+        return profile
+    except CalibrationError as exc:
+        raise AutomationError(str(exc)) from exc
+
+
 def reference_point(x: float, y: float) -> Point:
     """Return a reference-layout point scaled to the current display."""
     point = scaled_point(x, y, pyautogui.size())
@@ -44,10 +79,18 @@ def reference_point(x: float, y: float) -> Point:
 def reference_region(x: float, y: float, width: float, height: float) -> Region:
     """Return a reference-layout region scaled to the display and bounds-checked."""
     region = scaled_region(x, y, width, height, pyautogui.size())
+    validate_region(region)
+    return region
+
+
+def validate_region(region: Region) -> None:
+    """Reject screenshot regions outside the display or saved game viewport."""
     left, top, region_width, region_height = region
     screen_width, screen_height = pyautogui.size()
     if (
-        left < 0
+        region_width <= 0
+        or region_height <= 0
+        or left < 0
         or top < 0
         or left + region_width > screen_width
         or top + region_height > screen_height
@@ -56,17 +99,35 @@ def reference_region(x: float, y: float, width: float, height: float) -> Region:
             f"Screenshot region {region} falls outside the primary display "
             f"({screen_width} x {screen_height})."
         )
-    return region
+    profile = _calibration_for_display(screen_width, screen_height)
+    if profile is not None and (
+        left < profile.x
+        or top < profile.y
+        or left + region_width > profile.right
+        or top + region_height > profile.bottom
+    ):
+        raise AutomationError(
+            f"Screenshot region {region} extends outside the calibrated game viewport. "
+            "Recalibrate the viewport or use the supported reference layout."
+        )
 
 
 def validate_point(point: Point) -> None:
-    """Reject clicks or pixel reads outside the primary screen."""
+    """Reject clicks or pixel reads outside the display or calibrated viewport."""
     x, y = point
     screen_width, screen_height = pyautogui.size()
     if not (0 <= x < screen_width and 0 <= y < screen_height):
         raise AutomationError(
             f"Point {point} is outside the primary display "
             f"({screen_width} x {screen_height})."
+        )
+    profile = _calibration_for_display(screen_width, screen_height)
+    if profile is not None and not (
+        profile.x <= x < profile.right and profile.y <= y < profile.bottom
+    ):
+        raise AutomationError(
+            f"Point {point} falls outside the calibrated game viewport. "
+            "Recalibrate the viewport or use the supported reference layout."
         )
 
 
@@ -75,14 +136,17 @@ def click_point(
     *,
     clicks: int = 1,
     interval: float = 0.1,
+    cancel_event: Event | None = None,
 ) -> None:
     """Click a validated screen point while retaining PyAutoGUI's fail-safe."""
+    check_cancelled(cancel_event)
     validate_point(point)
     if clicks < 1:
         raise ValueError("clicks must be at least 1.")
     if interval < 0:
         raise ValueError("interval must be zero or greater.")
     pyautogui.click(point[0], point[1], clicks=clicks, interval=interval)
+    check_cancelled(cancel_event)
 
 
 def clipboard_modifier() -> str:
@@ -128,8 +192,9 @@ def wait_for_color(
     timeout: float = 15.0,
     tolerance: int = 18,
     poll_interval: float = 0.02,
+    cancel_event: Event | None = None,
 ) -> bool:
-    """Poll a screen pixel until it matches a color or the timeout expires."""
+    """Poll a screen pixel until it matches a color, cancellation, or timeout."""
     validate_point(point)
     if timeout <= 0 or poll_interval <= 0:
         raise ValueError("timeout and poll_interval must be positive.")
@@ -138,9 +203,11 @@ def wait_for_color(
 
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
+        check_cancelled(cancel_event)
         if color_matches(pyautogui.pixel(*point), expected, tolerance):
             return True
-        time.sleep(poll_interval)
+        interruptible_sleep(poll_interval, cancel_event)
+    check_cancelled(cancel_event)
     return False
 
 
@@ -151,6 +218,7 @@ def wait_for_color_change(
     timeout: float = 5.0,
     tolerance: int = 18,
     poll_interval: float = 0.02,
+    cancel_event: Event | None = None,
 ) -> bool:
     """Wait until a pixel differs from a previous visual state."""
     validate_point(point)
@@ -159,17 +227,26 @@ def wait_for_color_change(
 
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
+        check_cancelled(cancel_event)
         if not color_matches(pyautogui.pixel(*point), original, tolerance):
             return True
-        time.sleep(poll_interval)
+        interruptible_sleep(poll_interval, cancel_event)
+    check_cancelled(cancel_event)
     return False
 
 
-def open_game(game_name: str, url: str, load_wait: int = 5) -> None:
-    """Open a game in the default browser and provide a visible focus countdown."""
+def open_game(
+    game_name: str,
+    url: str,
+    load_wait: int = 5,
+    *,
+    cancel_event: Event | None = None,
+) -> None:
+    """Open a game and provide a cancellable visible focus countdown."""
     if not 0 <= load_wait <= 120:
         raise ValueError("load_wait must be between 0 and 120 seconds.")
 
+    check_cancelled(cancel_event)
     print(f"Opening {game_name}: {url}")
     opened = webbrowser.open_new_tab(url)
     if opened is False:
@@ -178,11 +255,12 @@ def open_game(game_name: str, url: str, load_wait: int = 5) -> None:
             "Open it manually and retry."
         )
     for remaining in range(load_wait, 0, -1):
+        check_cancelled(cancel_event)
         print(
             f"Make sure the Human Benchmark tab is active — "
             f"starting in {remaining} second(s)..."
         )
-        time.sleep(1)
+        interruptible_sleep(1, cancel_event)
     print("Automation is active. Do not use the mouse or keyboard for other tasks.")
 
 
