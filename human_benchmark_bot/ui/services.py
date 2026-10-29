@@ -61,6 +61,7 @@ class RunConfig:
     load_wait: int = DEFAULT_LOAD_WAIT
     debug: bool = False
     tesseract_cmd: str = ""
+    diagnostics_dir: str = ""
 
 
 @dataclass(frozen=True)
@@ -325,7 +326,7 @@ def run_game(
         rounds=config.rounds,
         load_wait=config.load_wait,
         debug=config.debug,
-        diagnostics_dir=str(config_directory() / "diagnostics"),
+        diagnostics_dir=config.diagnostics_dir or str(config_directory() / "diagnostics"),
         cancel_event=cancel_event,
     )
     elapsed = time.monotonic() - started
