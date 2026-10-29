@@ -98,7 +98,9 @@ def run(
     if rounds < 1:
         raise ValueError("rounds must be at least 1.")
 
-    open_game("Verbal Memory", GAME_URLS["verbal"], load_wait, cancel_event=cancel_event)
+    open_game(
+        "Verbal Memory", GAME_URLS["verbal"], load_wait, cancel_event=cancel_event
+    )
 
     start_point = reference_point(951, 507)
     seen_button = reference_point(870, 446)
