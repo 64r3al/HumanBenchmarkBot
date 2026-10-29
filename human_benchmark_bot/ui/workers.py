@@ -62,7 +62,9 @@ class RunWorker(QThread):
     def run(self) -> None:
         writer = _SignalWriter(self.log)
         try:
-            with redirect_stdout(writer), redirect_stderr(_SignalWriter(self.log, "warning")):
+            with redirect_stdout(writer), redirect_stderr(
+                _SignalWriter(self.log, "warning")
+            ):
                 result: dict[str, Any] = run_game(
                     self.config,
                     self.cancel_event,
