@@ -1,4 +1,4 @@
-"""Experimental Visual Memory routine based on bright-tile detection."""
+"""Experimental Visual Memory routine with bounded tile-detection waits."""
 
 from __future__ import annotations
 
@@ -7,7 +7,15 @@ import time
 import pyautogui
 from PIL import Image
 
-from ..automation import open_game, reference_point, reference_region
+from ..automation import (
+    AutomationError,
+    DetectionTimeout,
+    click_point,
+    open_game,
+    reference_point,
+    reference_region,
+    save_diagnostic_screenshot,
+)
 from ..config import GAME_URLS
 
 
@@ -30,26 +38,32 @@ def _active_runs(active: list[bool], max_gap: int = 2) -> list[tuple[int, int]]:
 
 
 def find_highlighted_cells(image: Image.Image) -> list[tuple[int, int]]:
-    """Estimate centers of bright tile regions in a screenshot crop.
+    """Estimate highlighted tile centers from bright rectangular regions.
 
-    This conservative first pass uses color projections instead of clicking
-    guessed positions. It can fail when the site's tile colors or layout change;
-    an empty result stops the current run.
+    The result contains centers relative to the supplied screenshot crop. This
+    conservative detector intentionally ignores tiny bright specks and returns
+    no cells when it cannot form plausible tile-sized regions.
     """
+    if image.width < 1 or image.height < 1:
+        return []
+
     rgb = image.convert("RGB")
+    pixels = rgb.load()
     width, height = rgb.size
-    pixels = list(rgb.getdata())
 
     def is_bright(pixel: tuple[int, int, int]) -> bool:
         red, green, blue = pixel
         return red >= 245 and green >= 245 and blue >= 245
 
+    min_column_pixels = max(10, int(height * 0.025))
     column_counts = [
-        sum(1 for y in range(height) if is_bright(pixels[y * width + x]))
+        sum(1 for y in range(height) if is_bright(pixels[x, y]))
         for x in range(width)
     ]
-    active_columns = [count >= 10 for count in column_counts]
-    x_runs = _active_runs(active_columns)
+    x_runs = _active_runs(
+        [count >= min_column_pixels for count in column_counts],
+        max_gap=2,
+    )
 
     cells: list[tuple[int, int]] = []
     for x_start, x_end in x_runs:
@@ -62,11 +76,14 @@ def find_highlighted_cells(image: Image.Image) -> list[tuple[int, int]]:
             sum(
                 1
                 for x in range(x_start, x_end + 1)
-                if is_bright(pixels[y * width + x])
+                if is_bright(pixels[x, y])
             )
             for y in range(height)
         ]
-        y_runs = _active_runs([count >= row_threshold for count in row_counts])
+        y_runs = _active_runs(
+            [count >= row_threshold for count in row_counts],
+            max_gap=2,
+        )
 
         for y_start, y_end in y_runs:
             tile_height = y_end - y_start + 1
@@ -74,8 +91,8 @@ def find_highlighted_cells(image: Image.Image) -> list[tuple[int, int]]:
                 continue
             cells.append(
                 (
-                    int(round((x_start + x_end) / 2)),
-                    int(round((y_start + y_end) / 2)),
+                    (x_start + x_end) // 2,
+                    (y_start + y_end) // 2,
                 )
             )
 
@@ -89,39 +106,107 @@ def find_highlighted_cells(image: Image.Image) -> list[tuple[int, int]]:
     return unique
 
 
-def run(rounds: int = 15, load_wait: int = 5) -> None:
-    """Attempt Visual Memory levels using screenshot tile detection."""
+def _wait_for_cells(
+    region: tuple[int, int, int, int],
+    *,
+    should_be_visible: bool,
+    timeout: float,
+) -> list[tuple[int, int]]:
+    """Wait for a plausible pattern to appear or disappear."""
+    if timeout <= 0:
+        raise ValueError("timeout must be positive.")
+
+    deadline = time.monotonic() + timeout
+    last_cells: list[tuple[int, int]] = []
+    while time.monotonic() < deadline:
+        screenshot = pyautogui.screenshot(region=region)
+        cells = find_highlighted_cells(screenshot)
+        if should_be_visible and cells:
+            return cells
+        if not should_be_visible and not cells:
+            return last_cells
+        if cells:
+            last_cells = cells
+        time.sleep(0.05)
+
+    state = "appear" if should_be_visible else "disappear"
+    raise DetectionTimeout(
+        f"Highlighted tiles did not {state} within {timeout:.1f} seconds."
+    )
+
+
+def run(
+    rounds: int = 15,
+    load_wait: int = 5,
+    *,
+    debug: bool = False,
+    diagnostics_dir: str = "diagnostics",
+) -> None:
+    """Replay detected tile patterns; abort when a visual transition is uncertain."""
     if rounds < 1:
         raise ValueError("rounds must be at least 1.")
 
     open_game("Visual Memory", GAME_URLS["visual"], load_wait)
-
     start_point = reference_point(960, 360)
     region = reference_region(596, 280, 700, 445)
+    left, top, _, _ = region
 
-    pyautogui.click(*start_point)
-    time.sleep(0.8)
+    click_point(start_point)
+    time.sleep(0.3)
 
     for turn in range(1, rounds + 1):
-        screenshot = pyautogui.screenshot(region=region)
-        cells = find_highlighted_cells(screenshot)
+        try:
+            cells = _wait_for_cells(
+                region,
+                should_be_visible=True,
+                timeout=8,
+            )
+            # Do not click while the reveal is still visible.
+            _wait_for_cells(
+                region,
+                should_be_visible=False,
+                timeout=8,
+            )
+        except DetectionTimeout:
+            save_diagnostic_screenshot(
+                "visual-pattern-transition-failed",
+                enabled=debug,
+                directory=diagnostics_dir,
+            )
+            raise
+
         if not cells:
-            raise RuntimeError(
-                "No highlighted cells were detected. Stopping to avoid blind "
-                "clicks; the current game layout may require new detection logic."
+            raise AutomationError(
+                "The detector returned no highlighted cells. Stopping safely."
             )
 
-        # Allow the reveal animation to end before selecting the detected cells.
-        time.sleep(0.75)
-        left, top, _, _ = region
         for relative_x, relative_y in cells:
-            pyautogui.click(left + relative_x, top + relative_y)
-            time.sleep(0.04)
+            click_point((left + relative_x, top + relative_y))
+            time.sleep(0.05)
 
         print(
             f"Visual Memory: selected {len(cells)} detected tile(s) "
             f"at level {turn}/{rounds}."
         )
-        time.sleep(1.2)
 
-    print("Visual Memory routine finished.")
+        if turn < rounds:
+            # Require a blank transition before accepting another pattern so
+            # previously displayed cells are not immediately reused as new data.
+            try:
+                _wait_for_cells(
+                    region,
+                    should_be_visible=False,
+                    timeout=5,
+                )
+            except DetectionTimeout:
+                save_diagnostic_screenshot(
+                    "visual-post-click-transition-failed",
+                    enabled=debug,
+                    directory=diagnostics_dir,
+                )
+                raise
+
+    print(
+        "Visual Memory routine reached its configured level limit. Verify the "
+        "on-screen result; layout changes may require detector recalibration."
+    )

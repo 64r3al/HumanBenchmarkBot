@@ -1,19 +1,55 @@
-"""Experimental Number Memory automation routine."""
+"""Experimental Number Memory routine with clipboard validation."""
 
 from __future__ import annotations
 
-import re
 import time
 
 import pyautogui
 import pyperclip
 
-from ..automation import open_game, reference_point, wait_for_color
+from ..automation import (
+    AutomationError,
+    DetectionTimeout,
+    click_point,
+    clipboard_modifier,
+    open_game,
+    reference_point,
+    save_diagnostic_screenshot,
+    wait_for_color,
+)
+from ..clipboard import wait_for_numeric_clipboard
 from ..config import GAME_URLS, NUMBER_INPUT_BLUE
 
 
-def run(rounds: int = 20, load_wait: int = 5) -> None:
-    """Copy each displayed number and submit it when the entry state appears."""
+def _copy_displayed_number(sample_point: tuple[int, int]) -> str:
+    """Select and copy the displayed number, refusing stale clipboard content."""
+    try:
+        pyperclip.copy("")
+    except Exception as exc:
+        raise AutomationError(
+            "Clipboard access is unavailable. Check the operating-system "
+            "clipboard backend and permissions."
+        ) from exc
+
+    click_point(sample_point, clicks=3, interval=0.08)
+    pyautogui.hotkey(clipboard_modifier(), "c")
+    number = wait_for_numeric_clipboard(pyperclip.paste)
+    if number is None:
+        raise AutomationError(
+            "Could not copy a numeric value. The displayed number may not be "
+            "selectable, or the game layout may have changed."
+        )
+    return number
+
+
+def run(
+    rounds: int = 20,
+    load_wait: int = 5,
+    *,
+    debug: bool = False,
+    diagnostics_dir: str = "diagnostics",
+) -> None:
+    """Copy and submit displayed numbers with bounded state checks."""
     if rounds < 1:
         raise ValueError("rounds must be at least 1.")
 
@@ -21,38 +57,50 @@ def run(rounds: int = 20, load_wait: int = 5) -> None:
     sample_point = reference_point(960, 360)
     start_point = reference_point(960, 460)
 
-    pyautogui.click(*start_point)
-    time.sleep(0.3)
+    click_point(start_point)
+    time.sleep(0.35)
 
     for turn in range(1, rounds + 1):
-        # The number is expected to be selectable text in the reference layout.
-        # Clear old clipboard data so a failed copy cannot reuse a prior answer.
-        pyperclip.copy("")
-        pyautogui.click(*sample_point, clicks=3, interval=0.08)
-        pyautogui.hotkey("ctrl", "c")
-        number = pyperclip.paste().strip()
-
-        if not re.fullmatch(r"\d{1,20}", number):
-            raise RuntimeError(
-                "Could not copy a numeric value from the game. The current "
-                "page may not support text selection at the configured point."
+        try:
+            number = _copy_displayed_number(sample_point)
+        except AutomationError:
+            save_diagnostic_screenshot(
+                "number-copy-failed",
+                enabled=debug,
+                directory=diagnostics_dir,
             )
+            raise
 
         if not wait_for_color(
-            sample_point, NUMBER_INPUT_BLUE, timeout=20, tolerance=25
+            sample_point,
+            NUMBER_INPUT_BLUE,
+            timeout=20,
+            tolerance=25,
         ):
-            raise RuntimeError(
-                "The number-entry state was not detected before timeout."
+            save_diagnostic_screenshot(
+                "number-input-state-timeout",
+                enabled=debug,
+                directory=diagnostics_dir,
+            )
+            raise DetectionTimeout(
+                f"Round {turn}/{rounds}: the number-entry state was not detected. "
+                "The page layout or colors may have changed."
             )
 
-        pyautogui.click(*sample_point)
-        pyautogui.hotkey("ctrl", "v")
+        click_point(sample_point)
+        pyautogui.hotkey(clipboard_modifier(), "v")
         pyautogui.press("enter")
-        print(f"Number Memory: submitted value for round {turn}/{rounds}.")
-        time.sleep(0.5)
+        print(f"Number Memory: submitted the copied value for round {turn}/{rounds}.")
 
         if turn < rounds:
-            pyautogui.click(*sample_point)
-            time.sleep(0.2)
+            # Start the next level only after the result transition has had time
+            # to render. If the expected button location is wrong, stop testing
+            # instead of relying on an unlimited series of clicks.
+            time.sleep(0.35)
+            click_point(start_point)
+            time.sleep(0.35)
 
-    print("Number Memory routine finished.")
+    print(
+        "Number Memory routine finished. Verify the game's on-screen result; "
+        "text selection can vary with browser and website changes."
+    )
