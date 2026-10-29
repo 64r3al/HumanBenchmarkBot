@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from threading import Event
+
 from ..automation import (
     AutomationError,
     DetectionTimeout,
+    check_cancelled,
     click_point,
     open_game,
     reference_point,
@@ -20,6 +23,7 @@ def run(
     *,
     debug: bool = False,
     diagnostics_dir: str = "diagnostics",
+    cancel_event: Event | None = None,
 ) -> None:
     """Run reaction-time trials using the reference UI coordinates.
 
@@ -29,22 +33,24 @@ def run(
     if rounds < 1:
         raise ValueError("rounds must be at least 1.")
 
-    open_game("Reaction Time", GAME_URLS["reaction"], load_wait)
+    open_game("Reaction Time", GAME_URLS["reaction"], load_wait, cancel_event=cancel_event)
     target = reference_point(960, 270)
 
     print(
         "Clicking the game starts a trial. Keep the game visible and avoid "
         "other mouse/keyboard input until the routine finishes."
     )
-    click_point(target)
+    click_point(target, cancel_event=cancel_event)
 
     for turn in range(1, rounds + 1):
+        check_cancelled(cancel_event)
         if not wait_for_color(
             target,
             REACTION_GREEN,
             timeout=30,
             tolerance=24,
             poll_interval=0.01,
+            cancel_event=cancel_event,
         ):
             save_diagnostic_screenshot(
                 "reaction-green-timeout",
@@ -56,12 +62,13 @@ def run(
                 "within 30 seconds. Check browser focus, zoom, and layout."
             )
 
-        click_point(target)
+        click_point(target, cancel_event=cancel_event)
         if not wait_for_color(
             target,
             REACTION_RESULT_BLUE,
             timeout=5,
             tolerance=24,
+            cancel_event=cancel_event,
         ):
             save_diagnostic_screenshot(
                 "reaction-state-did-not-change",
@@ -77,9 +84,7 @@ def run(
 
         if turn < rounds:
             # The result screen normally accepts a click to begin the next trial.
-            # The state-change check above prevents an immediate repeated click
-            # while the green target is still visible.
-            click_point(target)
+            click_point(target, cancel_event=cancel_event)
 
     print(
         "Reaction Time routine finished. Verify the on-screen results before "
