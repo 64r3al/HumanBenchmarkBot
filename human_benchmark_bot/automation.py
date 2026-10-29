@@ -41,9 +41,7 @@ def reference_point(x: float, y: float) -> Point:
     return point
 
 
-def reference_region(
-    x: float, y: float, width: float, height: float
-) -> Region:
+def reference_region(x: float, y: float, width: float, height: float) -> Region:
     """Return a reference-layout region scaled to the display and bounds-checked."""
     region = scaled_region(x, y, width, height, pyautogui.size())
     left, top, region_width, region_height = region
@@ -100,9 +98,7 @@ def parse_hex_color(value: str) -> RGB:
     if len(color) != 6:
         raise ValueError("Expected a six-digit RGB hex color.")
     try:
-        return tuple(
-            int(color[index : index + 2], 16) for index in (0, 2, 4)
-        )  # type: ignore[return-value]
+        return tuple(int(color[index : index + 2], 16) for index in (0, 2, 4))  # type: ignore[return-value]
     except ValueError as exc:
         raise ValueError(f"Invalid RGB hex color: {value!r}") from exc
 
@@ -187,9 +183,7 @@ def open_game(game_name: str, url: str, load_wait: int = 5) -> None:
             f"starting in {remaining} second(s)..."
         )
         time.sleep(1)
-    print(
-        "Automation is active. Do not use the mouse or keyboard for other tasks."
-    )
+    print("Automation is active. Do not use the mouse or keyboard for other tasks.")
 
 
 def save_diagnostic_screenshot(

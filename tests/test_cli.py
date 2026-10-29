@@ -40,7 +40,9 @@ def test_rounds_are_bounded_by_game(capsys: pytest.CaptureFixture[str]) -> None:
     assert "cannot exceed" in capsys.readouterr().err
 
 
-def test_load_wait_has_a_sensible_upper_bound(capsys: pytest.CaptureFixture[str]) -> None:
+def test_load_wait_has_a_sensible_upper_bound(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     with pytest.raises(SystemExit):
         cli.main(["--game", "reaction", "--load-wait", "121"])
     assert "between 0 and" in capsys.readouterr().err

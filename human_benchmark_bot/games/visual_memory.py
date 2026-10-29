@@ -57,8 +57,7 @@ def find_highlighted_cells(image: Image.Image) -> list[tuple[int, int]]:
 
     min_column_pixels = max(10, int(height * 0.025))
     column_counts = [
-        sum(1 for y in range(height) if is_bright(pixels[x, y]))
-        for x in range(width)
+        sum(1 for y in range(height) if is_bright(pixels[x, y])) for x in range(width)
     ]
     x_runs = _active_runs(
         [count >= min_column_pixels for count in column_counts],
@@ -73,11 +72,7 @@ def find_highlighted_cells(image: Image.Image) -> list[tuple[int, int]]:
 
         row_threshold = max(8, int(tile_width * 0.18))
         row_counts = [
-            sum(
-                1
-                for x in range(x_start, x_end + 1)
-                if is_bright(pixels[x, y])
-            )
+            sum(1 for x in range(x_start, x_end + 1) if is_bright(pixels[x, y]))
             for y in range(height)
         ]
         y_runs = _active_runs(
@@ -99,8 +94,7 @@ def find_highlighted_cells(image: Image.Image) -> list[tuple[int, int]]:
     unique: list[tuple[int, int]] = []
     for cell in cells:
         if not any(
-            abs(cell[0] - old[0]) < 8 and abs(cell[1] - old[1]) < 8
-            for old in unique
+            abs(cell[0] - old[0]) < 8 and abs(cell[1] - old[1]) < 8 for old in unique
         ):
             unique.append(cell)
     return unique

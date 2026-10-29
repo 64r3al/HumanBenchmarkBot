@@ -102,9 +102,7 @@ def _rounds_for(game: str, requested_rounds: int | None) -> int:
     if rounds < 1:
         raise ValueError("--rounds must be at least 1.")
     if rounds > MAX_ROUNDS[game]:
-        raise ValueError(
-            f"--rounds for {game} cannot exceed {MAX_ROUNDS[game]}."
-        )
+        raise ValueError(f"--rounds for {game} cannot exceed {MAX_ROUNDS[game]}.")
     return rounds
 
 

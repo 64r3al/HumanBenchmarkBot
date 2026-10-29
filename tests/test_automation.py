@@ -97,9 +97,12 @@ def test_diagnostic_screenshot_is_opt_in(
         "screenshot",
         lambda **kwargs: Image.new("RGB", (10, 10), (0, 0, 0)),
     )
-    assert automation.save_diagnostic_screenshot(
-        "failed-state", enabled=False, directory=tmp_path
-    ) is None
+    assert (
+        automation.save_diagnostic_screenshot(
+            "failed-state", enabled=False, directory=tmp_path
+        )
+        is None
+    )
     assert not tmp_path.exists()
 
     destination = automation.save_diagnostic_screenshot(
