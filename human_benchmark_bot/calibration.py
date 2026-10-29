@@ -39,7 +39,9 @@ class ScreenCalibration:
         if min(self.screen_width, self.screen_height, self.width, self.height) <= 0:
             raise CalibrationError("Display and viewport dimensions must be positive.")
         if self.x < 0 or self.y < 0:
-            raise CalibrationError("The calibrated viewport cannot start outside the display.")
+            raise CalibrationError(
+                "The calibrated viewport cannot start outside the display."
+            )
         if self.right > self.screen_width or self.bottom > self.screen_height:
             raise CalibrationError("The calibrated viewport falls outside the display.")
 
@@ -53,7 +55,10 @@ def config_directory() -> Path:
         return root / "HumanBenchmarkBot"
     if system == "Darwin":
         return home / "Library" / "Application Support" / "HumanBenchmarkBot"
-    return Path(os.environ.get("XDG_CONFIG_HOME", home / ".config")) / "human-benchmark-bot"
+    return (
+        Path(os.environ.get("XDG_CONFIG_HOME", home / ".config"))
+        / "human-benchmark-bot"
+    )
 
 
 def calibration_path() -> Path:
