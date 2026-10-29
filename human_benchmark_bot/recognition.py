@@ -27,9 +27,12 @@ def is_terminal_text(text: str) -> bool:
 
 
 def normalize_word(text: str) -> str:
-    """Return one normalized English word; reject multi-token OCR output."""
-    tokens = re.findall(r"[a-z]+(?:['-][a-z]+)*", text.casefold())
-    return tokens[0] if len(tokens) == 1 else ""
+    """Return one normalized English word; reject mixed or multi-token OCR output."""
+    match = re.fullmatch(
+        r"[^a-z0-9]*([a-z]+(?:['-][a-z]+)*)[^a-z0-9]*",
+        text.casefold().strip(),
+    )
+    return match.group(1) if match else ""
 
 
 def classify_word(word: str, seen_words: set[str]) -> str:
