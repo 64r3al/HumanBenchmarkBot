@@ -320,8 +320,6 @@ def run_game(
         "info",
         f"Starting {GAME_LABELS[config.game]} with a configured limit of {config.rounds}.",
     )
-    import time
-
     started = time.monotonic()
     module.run(
         rounds=config.rounds,
