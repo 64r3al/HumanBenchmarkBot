@@ -1,4 +1,4 @@
-"""Allow running the project with \x60\x60python -m human_benchmark_bot\x60\x60."""
+"""Allow running the project with python -m human_benchmark_bot."""
 
 from .cli import main
 
