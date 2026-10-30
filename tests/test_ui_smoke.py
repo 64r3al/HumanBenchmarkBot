@@ -62,7 +62,6 @@ def test_calibration_selection_maps_preview_pixels_to_screen_coordinates(
     assert label.selection_in_screen_coordinates() == (100, 50, 600, 300)
 
 
-
 def test_calibration_capture_hides_app_before_screenshot(
     qt_app, tmp_path, monkeypatch
 ) -> None:
