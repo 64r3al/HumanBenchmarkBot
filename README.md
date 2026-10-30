@@ -95,6 +95,20 @@ Or use the installed entry point:
 human-benchmark-bot-ui
 ```
 
+### Build a portable Windows application
+
+A Windows one-folder build can be created locally from PowerShell:
+
+```powershell
+.\scripts\build_windows.ps1
+```
+
+The script creates `dist\HumanBenchmarkBot\HumanBenchmarkBot.exe` and `dist\HumanBenchmarkBot-Windows-x64.zip`. The ZIP must be extracted as a whole; do not move the executable out of its application folder.
+
+A matching GitHub Actions workflow is available from **Actions → Build Windows desktop bundle → Run workflow**. It uploads a Windows x64 ZIP artifact for 30 days. Pushing a `v*` tag also triggers the build workflow, but this workflow does not publish a GitHub Release automatically.
+
+The portable build bundles the Python application and Qt runtime. It does not bundle a browser or Tesseract OCR. Install Tesseract separately to use Verbal Memory. The application remains experimental and still requires calibration, preflight, explicit run confirmation, and review of live results.
+
 The desktop interface is kept modular: `app.py` owns application startup, `main_window.py` coordinates navigation and run state, `pages.py` builds the dashboard/game/run/calibration/history/settings pages, `dialogs.py` contains the safety and viewport-selection dialogs, `services.py` owns validation/preflight/history, and `workers.py` runs automation outside the Qt event loop.
 
 The existing command-line interface remains available and does not require the GUI extra. To run tests and quality checks, install the development dependencies:
