@@ -3,6 +3,8 @@ name: Build Windows desktop bundle
 on:
   workflow_dispatch:
   push:
+    branches:
+      - "feature/desktop-ui-v0.3.0"
     tags:
       - "v*"
 
