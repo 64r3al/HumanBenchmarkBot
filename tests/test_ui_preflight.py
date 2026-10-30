@@ -47,9 +47,7 @@ def test_preflight_blocks_when_viewport_is_not_calibrated(
 def test_preflight_allows_compatible_geometry_but_warns_about_focus(
     monkeypatch, fixed_display
 ) -> None:
-    monkeypatch.setattr(
-        services, "load_calibration", _full_screen_profile
-    )
+    monkeypatch.setattr(services, "load_calibration", _full_screen_profile)
 
     checks = build_preflight(RunConfig(game="reaction", rounds=5))
 
@@ -86,9 +84,7 @@ def test_preflight_blocks_when_calibrated_viewport_excludes_reference_points(
 def test_verbal_preflight_blocks_when_tesseract_is_missing(
     monkeypatch, fixed_display
 ) -> None:
-    monkeypatch.setattr(
-        services, "load_calibration", _full_screen_profile
-    )
+    monkeypatch.setattr(services, "load_calibration", _full_screen_profile)
     monkeypatch.setattr(services, "_find_tesseract", lambda _path="": None)
 
     checks = build_preflight(RunConfig(game="verbal", rounds=100))
@@ -102,9 +98,7 @@ def test_verbal_preflight_blocks_when_tesseract_is_missing(
 def test_number_preflight_checks_clipboard_package_without_reading_clipboard(
     monkeypatch, fixed_display
 ) -> None:
-    monkeypatch.setattr(
-        services, "load_calibration", _full_screen_profile
-    )
+    monkeypatch.setattr(services, "load_calibration", _full_screen_profile)
     monkeypatch.setattr(
         services.importlib.util,
         "find_spec",
