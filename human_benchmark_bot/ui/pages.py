@@ -509,5 +509,3 @@ class MainWindowPages:
         layout.addLayout(save_row)
         layout.addStretch(1)
         return page
-
-
