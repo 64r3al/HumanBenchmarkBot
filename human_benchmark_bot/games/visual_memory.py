@@ -13,6 +13,8 @@ from ..automation import (
     DetectionTimeout,
     check_cancelled,
     click_point,
+    emit_log,
+    LogCallback,
     interruptible_sleep,
     open_game,
     reference_point,
@@ -149,13 +151,14 @@ def run(
     debug: bool = False,
     diagnostics_dir: str = "diagnostics",
     cancel_event: Event | None = None,
+    log_callback: LogCallback | None = None,
 ) -> None:
     """Replay detected tile patterns; abort when a visual transition is uncertain."""
     if rounds < 1:
         raise ValueError("rounds must be at least 1.")
 
     open_game(
-        "Visual Memory", GAME_URLS["visual"], load_wait, cancel_event=cancel_event
+        "Visual Memory", GAME_URLS["visual"], load_wait, cancel_event=cancel_event, log_callback=log_callback
     )
     start_point = reference_point(960, 360)
     region = reference_region(596, 280, 700, 445)
@@ -184,6 +187,7 @@ def run(
                 "visual-pattern-transition-failed",
                 enabled=debug,
                 directory=diagnostics_dir,
+                log_callback=log_callback,
             )
             raise
 
@@ -200,9 +204,10 @@ def run(
             )
             interruptible_sleep(0.05, cancel_event)
 
-        print(
+        emit_log(
             f"Visual Memory: selected {len(cells)} detected tile(s) "
-            f"at level {turn}/{rounds}."
+            f"at level {turn}/{rounds}.",
+            log_callback,
         )
 
         if turn < rounds:
@@ -219,10 +224,12 @@ def run(
                     "visual-post-click-transition-failed",
                     enabled=debug,
                     directory=diagnostics_dir,
+                    log_callback=log_callback,
                 )
                 raise
 
-    print(
+    emit_log(
         "Visual Memory routine reached its configured level limit. Verify the "
-        "on-screen result; layout changes may require detector recalibration."
+        "on-screen result; layout changes may require detector recalibration.",
+        log_callback,
     )
