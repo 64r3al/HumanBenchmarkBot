@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import time
 import webbrowser
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
 from threading import Event
@@ -17,6 +17,16 @@ from .calibration import CalibrationError, load_calibration, validate_current_di
 from .geometry import Point, Region, scaled_point, scaled_region
 
 RGB: TypeAlias = tuple[int, int, int]
+LogCallback: TypeAlias = Callable[[str, str], None]
+
+
+def emit_log(message: str, log_callback: LogCallback | None = None, *, level: str = "info") -> None:
+    """Send a routine message to its caller; preserve console output by default."""
+    if log_callback is None:
+        print(message)
+    else:
+        log_callback(level, message)
+
 
 # Keep PyAutoGUI's built-in emergency stop enabled and insert a small pause.
 pyautogui.FAILSAFE = True
@@ -243,13 +253,14 @@ def open_game(
     load_wait: int = 5,
     *,
     cancel_event: Event | None = None,
+    log_callback: LogCallback | None = None,
 ) -> None:
     """Open a game and provide a cancellable visible focus countdown."""
     if not 0 <= load_wait <= 120:
         raise ValueError("load_wait must be between 0 and 120 seconds.")
 
     check_cancelled(cancel_event)
-    print(f"Opening {game_name}: {url}")
+    emit_log(f"Opening {game_name}: {url}", log_callback)
     opened = webbrowser.open_new_tab(url)
     if opened is False:
         raise AutomationError(
@@ -258,12 +269,13 @@ def open_game(
         )
     for remaining in range(load_wait, 0, -1):
         check_cancelled(cancel_event)
-        print(
+        emit_log(
             f"Make sure the Human Benchmark tab is active — "
-            f"starting in {remaining} second(s)..."
+            f"starting in {remaining} second(s)...",
+            log_callback,
         )
         interruptible_sleep(1, cancel_event)
-    print("Automation is active. Do not use the mouse or keyboard for other tasks.")
+    emit_log("Automation is active. Do not use the mouse or keyboard for other tasks.", log_callback)
 
 
 def save_diagnostic_screenshot(
@@ -271,6 +283,7 @@ def save_diagnostic_screenshot(
     *,
     enabled: bool = False,
     directory: str | Path = "diagnostics",
+    log_callback: LogCallback | None = None,
 ) -> Path | None:
     """Optionally save a failure screenshot; never let diagnostics mask an error."""
     if not enabled:
@@ -283,8 +296,8 @@ def save_diagnostic_screenshot(
         output_directory.mkdir(parents=True, exist_ok=True)
         destination = output_directory / f"{timestamp}-{safe_label}.png"
         pyautogui.screenshot().save(destination)
-        print(f"Diagnostic screenshot saved: {destination}")
+        emit_log(f"Diagnostic screenshot saved: {destination}", log_callback)
         return destination
     except Exception as exc:
-        print(f"Warning: could not save diagnostic screenshot: {exc}")
+        emit_log(f"Warning: could not save diagnostic screenshot: {exc}", log_callback, level="warning")
         return None
