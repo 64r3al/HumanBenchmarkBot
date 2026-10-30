@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from PySide6.QtCore import QRect, QSize, QSettings
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from human_benchmark_bot.ui.dialogs import SafetyDialog, SelectionLabel
 from human_benchmark_bot.ui.main_window import MainWindow
@@ -60,3 +60,61 @@ def test_calibration_selection_maps_preview_pixels_to_screen_coordinates(
     label.selection = QRect(50, 25, 300, 150)
 
     assert label.selection_in_screen_coordinates() == (100, 50, 600, 300)
+
+
+
+def test_calibration_capture_hides_app_before_screenshot(
+    qt_app, tmp_path, monkeypatch
+) -> None:
+    from human_benchmark_bot.ui import main_window as main_window_module
+
+    settings = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
+    window = MainWindow(settings=settings)
+    window.show()
+
+    scheduled: list[tuple[int, object]] = []
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *args, **kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        main_window_module.QTimer,
+        "singleShot",
+        lambda delay, callback: scheduled.append((delay, callback)),
+    )
+
+    window._capture_calibration()
+
+    assert window.isHidden()
+    assert scheduled and scheduled[0][0] == 3000
+    window.show()
+    window.close()
+
+
+def test_calibration_capture_can_be_cancelled_without_hiding_app(
+    qt_app, tmp_path, monkeypatch
+) -> None:
+    from human_benchmark_bot.ui import main_window as main_window_module
+
+    settings = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
+    window = MainWindow(settings=settings)
+    window.show()
+
+    scheduled: list[tuple[int, object]] = []
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *args, **kwargs: QMessageBox.StandardButton.No,
+    )
+    monkeypatch.setattr(
+        main_window_module.QTimer,
+        "singleShot",
+        lambda delay, callback: scheduled.append((delay, callback)),
+    )
+
+    window._capture_calibration()
+
+    assert window.isVisible()
+    assert scheduled == []
+    window.close()
