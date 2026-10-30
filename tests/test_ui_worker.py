@@ -57,7 +57,8 @@ def test_run_game_passes_logging_callback_to_routine(monkeypatch) -> None:
         "import_module",
         lambda *_args, **_kwargs: fake_module,
     )
-    callback = lambda _level, _message: None
+    def callback(_level, _message):
+        return None
 
     result = run_game(
         RunConfig(game="reaction", rounds=1),
