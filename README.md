@@ -95,6 +95,8 @@ Or use the installed entry point:
 human-benchmark-bot-ui
 ```
 
+The desktop interface is kept modular: `app.py` owns application startup, `main_window.py` coordinates navigation and run state, `pages.py` builds the dashboard/game/run/calibration/history/settings pages, `dialogs.py` contains the safety and viewport-selection dialogs, `services.py` owns validation/preflight/history, and `workers.py` runs automation outside the Qt event loop.
+
 The existing command-line interface remains available and does not require the GUI extra. To run tests and quality checks, install the development dependencies:
 
 ```bash
