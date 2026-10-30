@@ -107,7 +107,7 @@ The script creates `dist\HumanBenchmarkBot\HumanBenchmarkBot.exe` and `dist\Huma
 
 A matching GitHub Actions workflow is available from **Actions → Build Windows desktop bundle → Run workflow**. It uploads a Windows x64 ZIP artifact for 30 days. Pushing a `v*` tag also triggers the build workflow, but this workflow does not publish a GitHub Release automatically.
 
-The portable build bundles the Python application and Qt runtime. It does not bundle a browser or Tesseract OCR. Install Tesseract separately to use Verbal Memory. The application remains experimental and still requires calibration, preflight, explicit run confirmation, and review of live results.
+The build checks that all four dynamically loaded game modules import from the frozen bundle and that the Qt app starts in offscreen mode before uploading the ZIP. The portable build bundles the Python application and Qt runtime. It does not bundle a browser or Tesseract OCR. Install Tesseract separately to use Verbal Memory. The application remains experimental and still requires calibration, preflight, explicit run confirmation, and review of live results.
 
 The desktop interface is kept modular: `app.py` owns application startup, `main_window.py` coordinates navigation and run state, `pages.py` builds the dashboard/game/run/calibration/history/settings pages, `dialogs.py` contains the safety and viewport-selection dialogs, `services.py` owns validation/preflight/history, and `workers.py` runs automation outside the Qt event loop.
 
