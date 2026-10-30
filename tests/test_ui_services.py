@@ -145,3 +145,60 @@ def test_invalid_calibration_bounds_are_rejected() -> None:
     )
     with pytest.raises(CalibrationError):
         profile.validate()
+
+
+def test_history_store_sanitizes_malformed_records_and_unknown_fields(tmp_path) -> None:
+    import json
+
+    path = tmp_path / "history.json"
+    path.write_text(
+        json.dumps(
+            [
+                {
+                    "timestamp": None,
+                    "game": ["invalid"],
+                    "rounds": "not-a-number",
+                    "status": None,
+                    "elapsed_seconds": "nan",
+                    "message": {"answer": "private"},
+                    "answer": "private",
+                    "clipboard": "private",
+                },
+                "not a record",
+                {
+                    "timestamp": "2026-10-30T12:00:00+00:00",
+                    "game": "Reaction Time",
+                    "rounds": 4,
+                    "status": "failed",
+                    "elapsed_seconds": 1.25,
+                    "message": "Routine stopped safely.",
+                    "screenshot": "private",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    rows = HistoryStore(path).read()
+
+    assert len(rows) == 2
+    assert rows[0] == {
+        "timestamp": "",
+        "game": "Unknown game",
+        "rounds": 0,
+        "status": "unknown",
+        "elapsed_seconds": 0.0,
+        "message": "",
+    }
+    assert rows[1]["game"] == "Reaction Time"
+    assert rows[1]["elapsed_seconds"] == 1.25
+    assert set(rows[1]) == {
+        "timestamp",
+        "game",
+        "rounds",
+        "status",
+        "elapsed_seconds",
+        "message",
+    }
+    assert all("answer" not in row and "clipboard" not in row for row in rows)
+

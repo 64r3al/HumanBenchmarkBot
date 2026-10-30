@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import json
+import math
 import shutil
 import time
 from dataclasses import dataclass
@@ -371,19 +372,47 @@ class HistoryStore:
             return []
         if not isinstance(payload, list):
             return []
-        return [item for item in payload if isinstance(item, dict)][-self.limit :]
+        return [
+            self._normalize_entry(item)
+            for item in payload
+            if isinstance(item, dict)
+        ][-self.limit :]
+
+    @staticmethod
+    def _normalize_entry(entry: dict[str, Any]) -> dict[str, Any]:
+        """Return only bounded, display-safe fields from an untrusted local record."""
+        timestamp = entry.get("timestamp")
+        game = entry.get("game")
+        status = entry.get("status")
+        message = entry.get("message")
+
+        try:
+            rounds = max(0, int(entry.get("rounds", 0)))
+        except (TypeError, ValueError, OverflowError):
+            rounds = 0
+
+        try:
+            elapsed_seconds = float(entry.get("elapsed_seconds", 0.0))
+        except (TypeError, ValueError, OverflowError):
+            elapsed_seconds = 0.0
+        if not math.isfinite(elapsed_seconds) or elapsed_seconds < 0:
+            elapsed_seconds = 0.0
+
+        return {
+            "timestamp": timestamp[:64] if isinstance(timestamp, str) else "",
+            "game": game[:80] if isinstance(game, str) else "Unknown game",
+            "rounds": rounds,
+            "status": status[:32] if isinstance(status, str) else "unknown",
+            "elapsed_seconds": elapsed_seconds,
+            "message": message[:300] if isinstance(message, str) else "",
+        }
 
     def add(self, entry: dict[str, Any]) -> None:
         """Append a safe summary without screenshots, clipboard contents, or game answers."""
         rows = self.read()
-        safe_entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "game": str(entry.get("game", "")),
-            "rounds": int(entry.get("rounds", 0)),
-            "status": str(entry.get("status", "unknown")),
-            "elapsed_seconds": float(entry.get("elapsed_seconds", 0.0)),
-            "message": str(entry.get("message", ""))[:300],
-        }
+        safe_entry = self._normalize_entry(
+            {**entry, "timestamp": datetime.now(timezone.utc).isoformat()}
+        )
         rows.append(safe_entry)
         rows = rows[-self.limit :]
         self.path.parent.mkdir(parents=True, exist_ok=True)
