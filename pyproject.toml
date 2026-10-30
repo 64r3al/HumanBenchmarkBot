@@ -28,6 +28,10 @@ dev = [
   "ruff>=0.8",
   "PySide6-Essentials>=6.7",
 ]
+desktop-build = [
+  "PySide6-Essentials>=6.7",
+  "PyInstaller>=6.10",
+]
 
 [project.scripts]
 human-benchmark-bot = "human_benchmark_bot.cli:main"
