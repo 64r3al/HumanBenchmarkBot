@@ -20,7 +20,12 @@ RGB: TypeAlias = tuple[int, int, int]
 LogCallback: TypeAlias = Callable[[str, str], None]
 
 
-def emit_log(message: str, log_callback: LogCallback | None = None, *, level: str = "info") -> None:
+def emit_log(
+    message: str,
+    log_callback: LogCallback | None = None,
+    *,
+    level: str = "info",
+) -> None:
     """Send a routine message to its caller; preserve console output by default."""
     if log_callback is None:
         print(message)
@@ -275,7 +280,10 @@ def open_game(
             log_callback,
         )
         interruptible_sleep(1, cancel_event)
-    emit_log("Automation is active. Do not use the mouse or keyboard for other tasks.", log_callback)
+    emit_log(
+        "Automation is active. Do not use the mouse or keyboard for other tasks.",
+        log_callback,
+    )
 
 
 def save_diagnostic_screenshot(
@@ -299,5 +307,9 @@ def save_diagnostic_screenshot(
         emit_log(f"Diagnostic screenshot saved: {destination}", log_callback)
         return destination
     except Exception as exc:
-        emit_log(f"Warning: could not save diagnostic screenshot: {exc}", log_callback, level="warning")
+        emit_log(
+            f"Warning: could not save diagnostic screenshot: {exc}",
+            log_callback,
+            level="warning",
+        )
         return None
