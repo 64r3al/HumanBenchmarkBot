@@ -19,8 +19,10 @@ if (Test-Path $DistDir) {
     Remove-Item $DistDir -Recurse -Force
 }
 
+New-Item -ItemType Directory -Path $BuildDir -Force | Out-Null
+
 Write-Host "Building the one-folder Windows desktop application..."
-python -m PyInstaller --noconfirm --clean --windowed --name HumanBenchmarkBot --collect-all PySide6 --collect-all shiboken6 run_desktop.py
+python -m PyInstaller --noconfirm --clean --windowed --name HumanBenchmarkBot --specpath $BuildDir --workpath (Join-Path $BuildDir "work") --distpath $DistDir --collect-all PySide6 --collect-all shiboken6 run_desktop.py
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed with exit code $LASTEXITCODE" }
 
 $Executable = Join-Path $AppDir "HumanBenchmarkBot.exe"
