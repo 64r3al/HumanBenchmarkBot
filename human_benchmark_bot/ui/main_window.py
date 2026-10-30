@@ -47,7 +47,7 @@ from .theme import stylesheet
 from .workers import RunWorker
 
 
-class MainWindow(MainWindowPages, QMainWindow):
+class MainWindow(QMainWindow, MainWindowPages):
     """Coordinate navigation, settings, calibration, and background run state."""
 
     def __init__(self, settings: QSettings, parent: QWidget | None = None):
