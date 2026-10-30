@@ -389,14 +389,21 @@ def run_game(
 
 
 class HistoryStore:
-    """Small local JSON history with bounded retention and atomic writes."""
+    """Metadata-only local history with bounded retention and atomic writes."""
 
     def __init__(self, path: Path | None = None, limit: int = 50):
         self.path = path or (config_directory() / "run-history.json")
         self.limit = max(1, limit)
 
+    def _write(self, rows: list[dict[str, Any]]) -> None:
+        """Atomically persist only normalized session metadata."""
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.path.with_suffix(".json.tmp")
+        temporary.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
+        temporary.replace(self.path)
+
     def read(self) -> list[dict[str, Any]]:
-        """Read recent history, ignoring malformed entries safely."""
+        """Read, bound, and migrate history to the metadata-only schema."""
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
         except FileNotFoundError:
@@ -405,17 +412,27 @@ class HistoryStore:
             return []
         if not isinstance(payload, list):
             return []
-        return [
+
+        normalized = [
             self._normalize_entry(item) for item in payload if isinstance(item, dict)
         ][-self.limit :]
 
+        # Older versions persisted free-form error messages. Those may contain OCR
+        # output, paths, or other private details, so rewrite legacy rows on read.
+        if payload != normalized:
+            try:
+                self._write(normalized)
+            except OSError:
+                # Keep the sanitized in-memory view usable if migration cannot write.
+                pass
+        return normalized
+
     @staticmethod
     def _normalize_entry(entry: dict[str, Any]) -> dict[str, Any]:
-        """Return only bounded, display-safe fields from an untrusted local record."""
+        """Keep only small, non-sensitive session metadata from a local record."""
         timestamp = entry.get("timestamp")
         game = entry.get("game")
         status = entry.get("status")
-        message = entry.get("message")
 
         try:
             rounds = max(0, int(entry.get("rounds", 0)))
@@ -435,21 +452,16 @@ class HistoryStore:
             "rounds": rounds,
             "status": status[:32] if isinstance(status, str) else "unknown",
             "elapsed_seconds": elapsed_seconds,
-            "message": message[:300] if isinstance(message, str) else "",
         }
 
     def add(self, entry: dict[str, Any]) -> None:
-        """Append a safe summary without screenshots, clipboard contents, or game answers."""
+        """Append session metadata without diagnostic text, answers, or screenshots."""
         rows = self.read()
         safe_entry = self._normalize_entry(
             {**entry, "timestamp": datetime.now(timezone.utc).isoformat()}
         )
         rows.append(safe_entry)
-        rows = rows[-self.limit :]
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = self.path.with_suffix(".json.tmp")
-        temporary.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
-        temporary.replace(self.path)
+        self._write(rows[-self.limit :])
 
     def clear(self) -> None:
         """Remove the local run history."""

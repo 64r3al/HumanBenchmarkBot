@@ -78,7 +78,7 @@ Install Tesseract from the official [Tesseract OCR project](https://github.com/t
 
 ## Desktop UI (optional)
 
-The project includes an optional PySide6 desktop interface. It provides a dashboard, four game cards, run configuration, preview-only planning, preflight checks, viewport calibration, local settings, session logs, and a bounded local history.
+The project includes an optional PySide6 desktop interface. It provides a dashboard, four game cards, run configuration, preview-only planning, preflight checks, viewport calibration, local settings, session logs, and a bounded, metadata-only local history.
 
 ### Install and launch
 
@@ -132,7 +132,7 @@ The viewport is stored in the operating system's user configuration directory. I
 
 The GUI displays a run that returns without an uncaught error as **completed — review required**, not as proof of a verified game result. Current game routines remain experimental and require supervised real-browser validation. Clipboard access is checked when Number Memory runs; preflight does not read or overwrite the clipboard. Diagnostic screenshots are local and opt-in.
 
-Settings and history are stored locally. History contains only a limited session summary; it does not intentionally store displayed numbers or screenshots. No account, hosted backend, telemetry, or remote logging is required.
+Settings and history are stored locally. History stores only the timestamp, game, configured interaction limit, status, and elapsed time. Free-form error details, OCR text, answers, clipboard contents, and screenshots are excluded. Legacy history is sanitized on read so fields outside this metadata-only schema are removed from the saved file. No account, hosted backend, telemetry, or remote logging is required.
 
 ### Preview only (safe default)
 

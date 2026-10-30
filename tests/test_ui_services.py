@@ -79,7 +79,9 @@ def test_preflight_gate_respects_blocking_checks() -> None:
     assert can_start_run([PreflightCheck("Focus", "attention", "manual check", False)])
 
 
-def test_history_store_is_bounded_and_does_not_store_answers(tmp_path) -> None:
+def test_history_store_is_bounded_and_does_not_store_sensitive_run_details(
+    tmp_path,
+) -> None:
     store = HistoryStore(tmp_path / "history.json", limit=2)
     store.add(
         {
@@ -96,6 +98,7 @@ def test_history_store_is_bounded_and_does_not_store_answers(tmp_path) -> None:
             "status": "failed",
             "elapsed_seconds": 2.0,
             "answer": "123456",
+            "message": "OCR output included private-word.",
         }
     )
     store.add(
@@ -104,13 +107,18 @@ def test_history_store_is_bounded_and_does_not_store_answers(tmp_path) -> None:
             "rounds": 4,
             "status": "cancelled",
             "elapsed_seconds": 1.0,
+            "message": "Diagnostic path: C:/Users/Example/private.png",
         }
     )
 
     rows = store.read()
+    persisted = store.path.read_text(encoding="utf-8")
     assert len(rows) == 2
     assert [row["game"] for row in rows] == ["Number Memory", "Visual Memory"]
-    assert all("answer" not in row for row in rows)
+    assert all("answer" not in row and "message" not in row for row in rows)
+    assert "123456" not in persisted
+    assert "private-word" not in persisted
+    assert "C:/Users/Example/private.png" not in persisted
 
 
 def test_calibration_round_trip_and_display_mismatch(monkeypatch, tmp_path) -> None:
@@ -147,7 +155,9 @@ def test_invalid_calibration_bounds_are_rejected() -> None:
         profile.validate()
 
 
-def test_history_store_sanitizes_malformed_records_and_unknown_fields(tmp_path) -> None:
+def test_history_store_sanitizes_legacy_records_and_discards_diagnostic_text(
+    tmp_path,
+) -> None:
     import json
 
     path = tmp_path / "history.json"
@@ -171,7 +181,7 @@ def test_history_store_sanitizes_malformed_records_and_unknown_fields(tmp_path) 
                     "rounds": 4,
                     "status": "failed",
                     "elapsed_seconds": 1.25,
-                    "message": "Routine stopped safely.",
+                    "message": "OCR output: private-word",
                     "screenshot": "private",
                 },
             ]
@@ -180,6 +190,7 @@ def test_history_store_sanitizes_malformed_records_and_unknown_fields(tmp_path) 
     )
 
     rows = HistoryStore(path).read()
+    migrated_payload = json.loads(path.read_text(encoding="utf-8"))
 
     assert len(rows) == 2
     assert rows[0] == {
@@ -188,7 +199,6 @@ def test_history_store_sanitizes_malformed_records_and_unknown_fields(tmp_path) 
         "rounds": 0,
         "status": "unknown",
         "elapsed_seconds": 0.0,
-        "message": "",
     }
     assert rows[1]["game"] == "Reaction Time"
     assert rows[1]["elapsed_seconds"] == 1.25
@@ -198,6 +208,10 @@ def test_history_store_sanitizes_malformed_records_and_unknown_fields(tmp_path) 
         "rounds",
         "status",
         "elapsed_seconds",
-        "message",
     }
-    assert all("answer" not in row and "clipboard" not in row for row in rows)
+    assert migrated_payload == rows
+    assert "private-word" not in path.read_text(encoding="utf-8")
+    assert all(
+        "answer" not in row and "clipboard" not in row and "message" not in row
+        for row in rows
+    )
