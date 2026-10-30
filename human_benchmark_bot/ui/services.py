@@ -7,6 +7,7 @@ import importlib.util
 import json
 import math
 import shutil
+import subprocess
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -91,13 +92,51 @@ def validate_run_config(config: RunConfig) -> None:
 
 
 def _find_tesseract(custom_path: str = "") -> str | None:
-    """Return a usable Tesseract executable path if one can be found."""
+    """Return a Tesseract executable path if one can be found."""
     if custom_path.strip():
         candidate = Path(custom_path.strip()).expanduser()
         if candidate.is_file():
             return str(candidate)
         return shutil.which(custom_path.strip())
     return shutil.which("tesseract")
+
+
+def _probe_tesseract(custom_path: str = "") -> tuple[str | None, str]:
+    """Verify that Tesseract runs and has its required English language data."""
+    executable = _find_tesseract(custom_path)
+    if executable is None:
+        return (
+            None,
+            "Tesseract was not found. Install it or set its executable path in Settings.",
+        )
+
+    try:
+        result = subprocess.run(
+            [executable, "--list-langs"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return None, "Tesseract did not respond within 5 seconds."
+    except OSError as exc:
+        return None, f"Tesseract could not be started: {exc}"
+
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "No diagnostic output.").strip()
+        return None, f"Tesseract language check failed: {detail[:240]}"
+
+    output = f"{result.stdout or ''}\n{result.stderr or ''}"
+    languages = {line.strip() for line in output.splitlines()}
+    if "eng" not in languages:
+        return (
+            None,
+            "Tesseract is running, but its English (eng) language data is missing. "
+            "Install the English traineddata file and check TESSDATA_PREFIX if needed.",
+        )
+
+    return executable, f"English OCR language data is available at {executable}."
 
 
 def _geometry_fits_viewport(game: str, profile, screen_size: tuple[int, int]) -> bool:
@@ -224,22 +263,15 @@ def build_preflight(config: RunConfig) -> list[PreflightCheck]:
         )
 
     if config.game == "verbal":
-        executable = _find_tesseract(config.tesseract_cmd)
-        if executable:
-            checks.append(
-                PreflightCheck(
-                    "Tesseract OCR", "passed", f"Executable found at {executable}."
-                )
+        executable, detail = _probe_tesseract(config.tesseract_cmd)
+        checks.append(
+            PreflightCheck(
+                "Tesseract OCR",
+                "passed" if executable else "failed",
+                detail,
+                blocking=executable is None,
             )
-        else:
-            checks.append(
-                PreflightCheck(
-                    "Tesseract OCR",
-                    "failed",
-                    "Tesseract is unavailable. Install it or set its executable path in Settings.",
-                    blocking=True,
-                )
-            )
+        )
 
     if config.game == "number":
         try:

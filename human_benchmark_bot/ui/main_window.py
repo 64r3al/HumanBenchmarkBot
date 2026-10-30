@@ -666,19 +666,13 @@ class MainWindow(QMainWindow, MainWindowPages):
             self.tesseract_edit.setText(path)
 
     def _test_tesseract(self) -> None:
-        from .services import _find_tesseract
+        from .services import _probe_tesseract
 
-        path = _find_tesseract(self.tesseract_edit.text())
+        path, detail = _probe_tesseract(self.tesseract_edit.text())
         if path:
-            QMessageBox.information(
-                self, "Tesseract available", f"Executable found:\n{path}"
-            )
+            QMessageBox.information(self, "Tesseract ready", detail)
         else:
-            QMessageBox.warning(
-                self,
-                "Tesseract unavailable",
-                "No Tesseract executable was found. Install Tesseract or select its executable path.",
-            )
+            QMessageBox.warning(self, "Tesseract unavailable", detail)
 
     def _browse_diagnostics(self) -> None:
         directory = QFileDialog.getExistingDirectory(

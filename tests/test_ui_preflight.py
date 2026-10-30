@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pyautogui
 import pytest
+import subprocess
 
 from human_benchmark_bot.calibration import ScreenCalibration
 from human_benchmark_bot.ui import services
@@ -85,7 +86,11 @@ def test_verbal_preflight_blocks_when_tesseract_is_missing(
     monkeypatch, fixed_display
 ) -> None:
     monkeypatch.setattr(services, "load_calibration", _full_screen_profile)
-    monkeypatch.setattr(services, "_find_tesseract", lambda _path="": None)
+    monkeypatch.setattr(
+        services,
+        "_probe_tesseract",
+        lambda _path="": (None, "Tesseract was not found."),
+    )
 
     checks = build_preflight(RunConfig(game="verbal", rounds=100))
 
@@ -93,6 +98,68 @@ def test_verbal_preflight_blocks_when_tesseract_is_missing(
     assert ocr.status == "failed"
     assert ocr.blocking is True
     assert not can_start_run(checks)
+
+
+def test_tesseract_probe_requires_english_language_data(monkeypatch) -> None:
+    monkeypatch.setattr(
+        services, "_find_tesseract", lambda _path="": "/usr/bin/tesseract"
+    )
+    monkeypatch.setattr(
+        services.subprocess,
+        "run",
+        lambda *_args, **_kwargs: subprocess.CompletedProcess(
+            args=["tesseract", "--list-langs"],
+            returncode=0,
+            stdout="List of available languages in \"tessdata\":\nfra\n",
+            stderr="",
+        ),
+    )
+
+    executable, detail = services._probe_tesseract()
+
+    assert executable is None
+    assert "English (eng) language data is missing" in detail
+
+
+def test_tesseract_probe_accepts_available_english_language_data(monkeypatch) -> None:
+    captured: list[tuple[object, dict[str, object]]] = []
+    monkeypatch.setattr(
+        services, "_find_tesseract", lambda _path="": "/usr/bin/tesseract"
+    )
+
+    def fake_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess:
+        captured.append((args, kwargs))
+        return subprocess.CompletedProcess(
+            args=["tesseract", "--list-langs"],
+            returncode=0,
+            stdout="List of available languages in \"tessdata\":\neng\nosd\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(services.subprocess, "run", fake_run)
+
+    executable, detail = services._probe_tesseract()
+
+    assert executable == "/usr/bin/tesseract"
+    assert "English OCR language data is available" in detail
+    assert captured[0][1]["timeout"] == 5
+    assert captured[0][1]["check"] is False
+
+
+def test_tesseract_probe_stops_on_process_timeout(monkeypatch) -> None:
+    monkeypatch.setattr(
+        services, "_find_tesseract", lambda _path="": "/usr/bin/tesseract"
+    )
+
+    def timed_out(*args: object, **kwargs: object) -> None:
+        raise subprocess.TimeoutExpired("tesseract", timeout=5)
+
+    monkeypatch.setattr(services.subprocess, "run", timed_out)
+
+    executable, detail = services._probe_tesseract()
+
+    assert executable is None
+    assert "did not respond within 5 seconds" in detail
 
 
 def test_number_preflight_checks_clipboard_package_without_reading_clipboard(

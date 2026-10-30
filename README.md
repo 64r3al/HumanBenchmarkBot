@@ -30,7 +30,7 @@ The initial coordinate map is based on a 1920 × 1080 reference layout. Coordina
 
 - Python 3.10 or newer
 - A desktop session with a visible browser and mouse/keyboard control
-- Tesseract OCR installed separately for Verbal Memory
+- Tesseract OCR installed separately with the English (`eng`) language data for Verbal Memory
 - Clipboard support for Number Memory
 
 ## Installation
@@ -72,7 +72,7 @@ python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
-Install Tesseract from the official [Tesseract OCR project](https://github.com/tesseract-ocr/tesseract). If it is not on your `PATH`, provide its executable path using `--tesseract-cmd`.
+Install Tesseract from the official [Tesseract OCR project](https://github.com/tesseract-ocr/tesseract), including the English (`eng`) language data. GUI preflight runs Tesseract's `--list-langs` command and blocks Verbal Memory when the executable cannot run or the English data is missing. If it is not on your `PATH`, provide its executable path using `--tesseract-cmd` or Settings.
 
 ## Usage
 
