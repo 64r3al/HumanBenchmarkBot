@@ -364,8 +364,10 @@ class MainWindowPages:
         card_layout.addWidget(title)
         card_layout.addWidget(
             _muted_label(
-                "Capture is performed only after you click the button below. Select a rectangle "
-                "that contains every required game button and screenshot region. The saved bounds "
+                "After you confirm, this app hides for 3 seconds. Bring the browser/game window "
+                "to the foreground during the countdown; the screenshot is taken with this "
+                "app hidden. Select a rectangle containing every required game button and "
+                "screenshot region. The saved bounds "
                 "reject clicks or captures outside that area; they do not automatically correct "
                 "browser zoom, offsets, or the game's fixed reference points."
             )
