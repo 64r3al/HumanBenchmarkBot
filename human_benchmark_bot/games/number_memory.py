@@ -66,7 +66,11 @@ def run(
         raise ValueError("rounds must be at least 1.")
 
     open_game(
-        "Number Memory", GAME_URLS["number"], load_wait, cancel_event=cancel_event, log_callback=log_callback
+        "Number Memory",
+        GAME_URLS["number"],
+        load_wait,
+        cancel_event=cancel_event,
+        log_callback=log_callback,
     )
     sample_point = reference_point(960, 360)
     start_point = reference_point(960, 460)
@@ -128,7 +132,10 @@ def run(
         pyautogui.write(number, interval=0.02)
         check_cancelled(cancel_event)
         pyautogui.press("enter")
-        emit_log(f"Number Memory: submitted the copied value for round {turn}/{rounds}.", log_callback)
+        emit_log(
+            f"Number Memory: submitted the copied value for round {turn}/{rounds}.",
+            log_callback,
+        )
 
         if turn < rounds:
             # Wait for the known ready-screen color before clicking the next-level
