@@ -17,6 +17,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .pages import _muted_label
+
 
 def _button(text: str, *, primary: bool = False, danger: bool = False) -> QPushButton:
     button = QPushButton(text)
