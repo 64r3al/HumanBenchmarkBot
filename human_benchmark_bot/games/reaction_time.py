@@ -9,6 +9,8 @@ from ..automation import (
     DetectionTimeout,
     check_cancelled,
     click_point,
+    emit_log,
+    LogCallback,
     open_game,
     reference_point,
     save_diagnostic_screenshot,
@@ -24,6 +26,7 @@ def run(
     debug: bool = False,
     diagnostics_dir: str = "diagnostics",
     cancel_event: Event | None = None,
+    log_callback: LogCallback | None = None,
 ) -> None:
     """Run reaction-time trials using the reference UI coordinates.
 
@@ -34,13 +37,14 @@ def run(
         raise ValueError("rounds must be at least 1.")
 
     open_game(
-        "Reaction Time", GAME_URLS["reaction"], load_wait, cancel_event=cancel_event
+        "Reaction Time", GAME_URLS["reaction"], load_wait, cancel_event=cancel_event, log_callback=log_callback
     )
     target = reference_point(960, 270)
 
-    print(
+    emit_log(
         "Clicking the game starts a trial. Keep the game visible and avoid "
-        "other mouse/keyboard input until the routine finishes."
+        "other mouse/keyboard input until the routine finishes.",
+        log_callback,
     )
     click_point(target, cancel_event=cancel_event)
 
@@ -58,6 +62,7 @@ def run(
                 "reaction-green-timeout",
                 enabled=debug,
                 directory=diagnostics_dir,
+                log_callback=log_callback,
             )
             raise DetectionTimeout(
                 f"Trial {turn}/{rounds}: the green state was not detected "
@@ -82,13 +87,14 @@ def run(
                 "detected after the click. Stopping instead of risking extra clicks."
             )
 
-        print(f"Reaction Time: interaction {turn}/{rounds} completed.")
+        emit_log(f"Reaction Time: interaction {turn}/{rounds} completed.", log_callback)
 
         if turn < rounds:
             # The result screen normally accepts a click to begin the next trial.
             click_point(target, cancel_event=cancel_event)
 
-    print(
+    emit_log(
         "Reaction Time routine finished. Verify the on-screen results before "
-        "saving or sharing them."
+        "saving or sharing them.",
+        log_callback,
     )
