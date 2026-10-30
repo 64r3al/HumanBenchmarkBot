@@ -39,8 +39,6 @@ def test_sidebar_navigation_switches_pages(qt_app, tmp_path) -> None:
     assert window.nav_buttons[3].isChecked()
     window.close()
 
-
-
 def test_safety_dialog_requires_explicit_acknowledgement(qt_app) -> None:
     dialog = SafetyDialog("Reaction Time")
 
