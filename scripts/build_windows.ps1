@@ -31,6 +31,29 @@ if (-not (Test-Path $Executable)) {
 Copy-Item (Join-Path $ProjectRoot "README.md") $AppDir
 Copy-Item (Join-Path $ProjectRoot "LICENSE") $AppDir
 
+Write-Host "Smoke-testing the frozen GUI in Qt offscreen mode..."
+$PreviousQtPlatform = $env:QT_QPA_PLATFORM
+$env:QT_QPA_PLATFORM = "offscreen"
+$SmokeProcess = $null
+try {
+    $SmokeProcess = Start-Process -FilePath $Executable -PassThru
+    Start-Sleep -Seconds 4
+    $SmokeProcess.Refresh()
+    if ($SmokeProcess.HasExited) {
+        throw "The frozen GUI exited during startup smoke testing (exit code $($SmokeProcess.ExitCode))."
+    }
+    Write-Host "Frozen GUI startup smoke test passed."
+}
+finally {
+    if ($SmokeProcess) {
+        $SmokeProcess.Refresh()
+        if (-not $SmokeProcess.HasExited) {
+            Stop-Process -Id $SmokeProcess.Id -Force -ErrorAction SilentlyContinue
+        }
+    }
+    $env:QT_QPA_PLATFORM = $PreviousQtPlatform
+}
+
 $FirstRun = @'
 HumanBenchmarkBot — Windows portable build
 
