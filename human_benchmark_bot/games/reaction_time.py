@@ -37,7 +37,11 @@ def run(
         raise ValueError("rounds must be at least 1.")
 
     open_game(
-        "Reaction Time", GAME_URLS["reaction"], load_wait, cancel_event=cancel_event, log_callback=log_callback
+        "Reaction Time",
+        GAME_URLS["reaction"],
+        load_wait,
+        cancel_event=cancel_event,
+        log_callback=log_callback,
     )
     target = reference_point(960, 270)
 
@@ -81,13 +85,17 @@ def run(
                 "reaction-state-did-not-change",
                 enabled=debug,
                 directory=diagnostics_dir,
+                log_callback=log_callback,
             )
             raise AutomationError(
                 f"Trial {turn}/{rounds}: the expected result screen was not "
                 "detected after the click. Stopping instead of risking extra clicks."
             )
 
-        emit_log(f"Reaction Time: interaction {turn}/{rounds} completed.", log_callback)
+        emit_log(
+            f"Reaction Time: interaction {turn}/{rounds} completed.",
+            log_callback,
+        )
 
         if turn < rounds:
             # The result screen normally accepts a click to begin the next trial.
