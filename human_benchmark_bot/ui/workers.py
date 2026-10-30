@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import io
-from contextlib import redirect_stderr, redirect_stdout
 from threading import Event
 from typing import Any
 
@@ -11,36 +9,6 @@ from PySide6.QtCore import QThread, Signal
 
 from ..automation import RunCancelled
 from .services import RunConfig, run_game
-
-
-class _SignalWriter(io.TextIOBase):
-    """Redirect line-oriented text from the existing routines to a Qt signal."""
-
-    def __init__(self, signal: Signal, level: str = "info"):
-        super().__init__()
-        self.signal = signal
-        self.level = level
-        self._buffer = ""
-
-    def writable(self) -> bool:
-        return True
-
-    def write(self, text: str) -> int:
-        if not isinstance(text, str):
-            text = str(text)
-        self._buffer += text
-        while "\n" in self._buffer:
-            line, self._buffer = self._buffer.split("\n", 1)
-            cleaned = line.strip()
-            if cleaned:
-                self.signal.emit(self.level, cleaned)
-        return len(text)
-
-    def flush(self) -> None:
-        cleaned = self._buffer.strip()
-        if cleaned:
-            self.signal.emit(self.level, cleaned)
-        self._buffer = ""
 
 
 class RunWorker(QThread):
@@ -61,18 +29,12 @@ class RunWorker(QThread):
         self.cancel_event.set()
 
     def run(self) -> None:
-        writer = _SignalWriter(self.log)
         try:
-            with (
-                redirect_stdout(writer),
-                redirect_stderr(_SignalWriter(self.log, "warning")),
-            ):
-                result: dict[str, Any] = run_game(
-                    self.config,
-                    self.cancel_event,
-                    self._log_message,
-                )
-            writer.flush()
+            result: dict[str, Any] = run_game(
+                self.config,
+                self.cancel_event,
+                self._log_message,
+            )
             if result.get("status") == "cancelled" or self.cancel_event.is_set():
                 self.cancelled.emit(str(result.get("message", "Run cancelled.")))
             else:
@@ -81,8 +43,6 @@ class RunWorker(QThread):
             self.cancelled.emit(str(exc) or "Run cancelled at a safe checkpoint.")
         except Exception as exc:
             self.error.emit(f"{exc.__class__.__name__}: {exc}")
-        finally:
-            writer.flush()
 
     def _log_message(self, level: str, message: str) -> None:
         self.log.emit(level, message)
