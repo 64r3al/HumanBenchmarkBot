@@ -181,7 +181,7 @@ Use `--debug` to save a screenshot when a supported detection failure occurs:
 python -m human_benchmark_bot --game reaction --allow-input --debug
 ```
 
-Diagnostic images are written to `diagnostics/` by default and are ignored by Git. Inspect them before sharing; they may contain unrelated desktop content. The debug flag is opt-in and is not required for normal runs.
+Diagnostic images are written to `diagnostics/` by default and are ignored by Git. They contain only the saved, calibrated game viewport—not the entire desktop. A valid viewport calibration is required; without one, screenshot capture is skipped and a warning is logged. Inspect images before sharing because the selected game area may still contain personal information. The debug flag is opt-in and is not required for normal runs.
 
 ## Tests and development
 

@@ -293,18 +293,27 @@ def save_diagnostic_screenshot(
     directory: str | Path = "diagnostics",
     log_callback: LogCallback | None = None,
 ) -> Path | None:
-    """Optionally save a failure screenshot; never let diagnostics mask an error."""
+    """Optionally save only the calibrated game viewport; never mask the original error."""
     if not enabled:
         return None
 
     safe_label = re.sub(r"[^a-zA-Z0-9_-]+", "-", label).strip("-") or "failure"
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     try:
+        screen_width, screen_height = pyautogui.size()
+        profile = _calibration_for_display(screen_width, screen_height)
+        if profile is None:
+            raise AutomationError(
+                "A valid calibrated game viewport is required for diagnostic screenshots. "
+                "Calibrate the game area first; no full-desktop screenshot was captured."
+            )
+
         output_directory = Path(directory)
         output_directory.mkdir(parents=True, exist_ok=True)
         destination = output_directory / f"{timestamp}-{safe_label}.png"
-        pyautogui.screenshot().save(destination)
-        emit_log(f"Diagnostic screenshot saved: {destination}", log_callback)
+        viewport = (profile.x, profile.y, profile.width, profile.height)
+        pyautogui.screenshot(region=viewport).save(destination)
+        emit_log(f"Diagnostic viewport screenshot saved: {destination}", log_callback)
         return destination
     except Exception as exc:
         emit_log(

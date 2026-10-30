@@ -88,15 +88,29 @@ def test_wait_for_color_change_detects_transition(
     )
 
 
-def test_diagnostic_screenshot_is_opt_in(
+def test_diagnostic_screenshot_is_opt_in_and_uses_calibrated_viewport(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    captured: list[dict[str, object]] = []
+
+    def fake_screenshot(**kwargs: object) -> Image.Image:
+        captured.append(kwargs)
+        return Image.new("RGB", (10, 10), (0, 0, 0))
+
+    monkeypatch.setattr(automation.pyautogui, "screenshot", fake_screenshot)
+    profile = type(
+        "Viewport",
+        (),
+        {"x": 12, "y": 24, "width": 640, "height": 360},
+    )()
     monkeypatch.setattr(
-        automation.pyautogui,
-        "screenshot",
-        lambda **kwargs: Image.new("RGB", (10, 10), (0, 0, 0)),
+        automation,
+        "_calibration_for_display",
+        lambda *_args: profile,
     )
+    monkeypatch.setattr(automation.pyautogui, "size", lambda: (1920, 1080))
+
     assert (
         automation.save_diagnostic_screenshot(
             "failed-state", enabled=False, directory=tmp_path
@@ -104,6 +118,7 @@ def test_diagnostic_screenshot_is_opt_in(
         is None
     )
     assert list(tmp_path.iterdir()) == []
+    assert captured == []
 
     destination = automation.save_diagnostic_screenshot(
         "failed state!", enabled=True, directory=tmp_path
@@ -111,3 +126,29 @@ def test_diagnostic_screenshot_is_opt_in(
     assert destination is not None
     assert destination.exists()
     assert destination.suffix == ".png"
+    assert captured == [{"region": (12, 24, 640, 360)}]
+
+
+def test_diagnostic_screenshot_is_skipped_without_valid_calibration(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def unexpected_screenshot(**kwargs: object) -> Image.Image:
+        pytest.fail("A full-desktop screenshot must not be captured.")
+
+    monkeypatch.setattr(automation.pyautogui, "screenshot", unexpected_screenshot)
+    monkeypatch.setattr(automation.pyautogui, "size", lambda: (1920, 1080))
+    monkeypatch.setattr(
+        automation,
+        "_calibration_for_display",
+        lambda *_args: None,
+    )
+
+    destination = automation.save_diagnostic_screenshot(
+        "uncalibrated", enabled=True, directory=tmp_path
+    )
+
+    assert destination is None
+    assert list(tmp_path.iterdir()) == []
+    assert "no full-desktop screenshot was captured" in capsys.readouterr().out.lower()
