@@ -158,7 +158,11 @@ def run(
         raise ValueError("rounds must be at least 1.")
 
     open_game(
-        "Visual Memory", GAME_URLS["visual"], load_wait, cancel_event=cancel_event, log_callback=log_callback
+        "Visual Memory",
+        GAME_URLS["visual"],
+        load_wait,
+        cancel_event=cancel_event,
+        log_callback=log_callback,
     )
     start_point = reference_point(960, 360)
     region = reference_region(596, 280, 700, 445)
