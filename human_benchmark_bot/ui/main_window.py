@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QStackedWidget,
+    QSizePolicy,
     QStatusBar,
     QVBoxLayout,
     QWidget,
