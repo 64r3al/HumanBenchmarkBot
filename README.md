@@ -122,7 +122,7 @@ ruff format --check .
 
 ### Using the GUI safely
 
-1. Open **Calibration**, click **Capture screen and select viewport**, and drag a rectangle around the complete game area used by the selected routine.
+1. Open **Calibration**, click **Capture screen and select viewport**, confirm the prompt, and bring the browser/game window to the foreground during the 3-second countdown. The app hides before taking the screenshot; then drag a rectangle around the complete game area used by the selected routine.
 2. In **Run**, select one game, choose the interaction limit, and click **Run preflight**.
 3. Use **Preview only** to inspect the planned routine without opening a browser or sending desktop input.
 4. Start actual automation only after all blocking preflight checks pass and you explicitly acknowledge the safety confirmation.
