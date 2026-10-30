@@ -201,4 +201,3 @@ def test_history_store_sanitizes_malformed_records_and_unknown_fields(tmp_path) 
         "message",
     }
     assert all("answer" not in row and "clipboard" not in row for row in rows)
-
