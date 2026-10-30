@@ -35,7 +35,12 @@ Copy-Item (Join-Path $ProjectRoot "LICENSE") $AppDir
 
 
 Write-Host "Checking frozen dynamic game imports..."
-$ImportTestProcess = Start-Process -FilePath $Executable -ArgumentList "--self-test-imports" -PassThru -Wait
+$ImportTestProcess = Start-Process -FilePath $Executable -ArgumentList @("--self-test-imports") -PassThru
+if (-not $ImportTestProcess.WaitForExit(60000)) {
+    Stop-Process -Id $ImportTestProcess.Id -Force -ErrorAction SilentlyContinue
+    throw "Frozen game-module import check timed out after 60 seconds."
+}
+$ImportTestProcess.Refresh()
 if ($ImportTestProcess.ExitCode -ne 0) {
     throw "Frozen game-module import check failed with exit code $($ImportTestProcess.ExitCode)."
 }
