@@ -102,7 +102,11 @@ def run(
         raise ValueError("rounds must be at least 1.")
 
     open_game(
-        "Verbal Memory", GAME_URLS["verbal"], load_wait, cancel_event=cancel_event, log_callback=log_callback
+        "Verbal Memory",
+        GAME_URLS["verbal"],
+        load_wait,
+        cancel_event=cancel_event,
+        log_callback=log_callback,
     )
 
     start_point = reference_point(951, 507)
@@ -121,7 +125,10 @@ def run(
             word, confidence = read_displayed_word(screenshot)
             check_cancelled(cancel_event)
         except GameEnded:
-            emit_log(f"Verbal Memory ended after {turn - 1} completed interaction(s).", log_callback)
+            emit_log(
+                f"Verbal Memory ended after {turn - 1} completed interaction(s).",
+                log_callback,
+            )
             return
         except (AutomationError, pytesseract.TesseractNotFoundError) as exc:
             save_diagnostic_screenshot(
