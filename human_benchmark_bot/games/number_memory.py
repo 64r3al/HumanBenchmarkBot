@@ -11,6 +11,8 @@ from ..automation import (
     DetectionTimeout,
     check_cancelled,
     click_point,
+    emit_log,
+    LogCallback,
     clipboard_modifier,
     interruptible_sleep,
     open_game,
@@ -57,13 +59,14 @@ def run(
     debug: bool = False,
     diagnostics_dir: str = "diagnostics",
     cancel_event: Event | None = None,
+    log_callback: LogCallback | None = None,
 ) -> None:
     """Copy and submit displayed numbers with bounded state checks."""
     if rounds < 1:
         raise ValueError("rounds must be at least 1.")
 
     open_game(
-        "Number Memory", GAME_URLS["number"], load_wait, cancel_event=cancel_event
+        "Number Memory", GAME_URLS["number"], load_wait, cancel_event=cancel_event, log_callback=log_callback
     )
     sample_point = reference_point(960, 360)
     start_point = reference_point(960, 460)
@@ -79,6 +82,7 @@ def run(
             "number-start-screen-not-detected",
             enabled=debug,
             directory=diagnostics_dir,
+            log_callback=log_callback,
         )
         raise DetectionTimeout(
             "The Number Memory start screen was not detected. Check the "
@@ -97,6 +101,7 @@ def run(
                 "number-copy-failed",
                 enabled=debug,
                 directory=diagnostics_dir,
+                log_callback=log_callback,
             )
             raise
 
@@ -111,6 +116,7 @@ def run(
                 "number-input-state-timeout",
                 enabled=debug,
                 directory=diagnostics_dir,
+                log_callback=log_callback,
             )
             raise DetectionTimeout(
                 f"Round {turn}/{rounds}: the number-entry state was not detected. "
@@ -122,7 +128,7 @@ def run(
         pyautogui.write(number, interval=0.02)
         check_cancelled(cancel_event)
         pyautogui.press("enter")
-        print(f"Number Memory: submitted the copied value for round {turn}/{rounds}.")
+        emit_log(f"Number Memory: submitted the copied value for round {turn}/{rounds}.", log_callback)
 
         if turn < rounds:
             # Wait for the known ready-screen color before clicking the next-level
@@ -138,6 +144,7 @@ def run(
                     "number-next-level-not-detected",
                     enabled=debug,
                     directory=diagnostics_dir,
+                    log_callback=log_callback,
                 )
                 raise DetectionTimeout(
                     f"Round {turn}/{rounds}: the next-level screen was not "
@@ -146,7 +153,8 @@ def run(
             click_point(start_point, cancel_event=cancel_event)
             interruptible_sleep(0.35, cancel_event)
 
-    print(
+    emit_log(
         "Number Memory routine finished. Verify the game's on-screen result; "
-        "text selection can vary with browser and website changes."
+        "text selection can vary with browser and website changes.",
+        log_callback,
     )
