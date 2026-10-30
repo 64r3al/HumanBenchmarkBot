@@ -17,15 +17,15 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install system dependencies for a virtual X display
         run: |
           sudo apt-get update
-          sudo apt-get install --yes xvfb xauth
+          sudo apt-get install --yes xvfb xauth libegl1 libgl1
       - name: Install project and development dependencies
         run: |
           python -m pip install --upgrade pip
@@ -38,3 +38,59 @@ jobs:
         run: ruff format --check .
       - name: Run unit tests
         run: xvfb-run -a python -m pytest
+        env:
+          QT_QPA_PLATFORM: offscreen
+
+  cli-without-gui:
+    name: CLI without optional GUI · Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install only the core package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .
+      - name: Verify the GUI dependency is not installed
+        run: python -c "import importlib.util; assert importlib.util.find_spec('PySide6') is None, 'PySide6 should remain optional'"
+      - name: Smoke-test CLI help
+        run: python -m human_benchmark_bot --help
+      - name: Smoke-test safe preview mode
+        run: python -m human_benchmark_bot --game reaction --dry-run
+
+  windows-smoke:
+    name: Windows Python ${{ matrix.python-version }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install project and development dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Check Python syntax
+        run: python -m compileall -q human_benchmark_bot tests
+      - name: Lint
+        run: ruff check .
+      - name: Check formatting
+        run: ruff format --check .
+      - name: Run unit and GUI smoke tests
+        run: python -m pytest
+        env:
+          QT_QPA_PLATFORM: offscreen

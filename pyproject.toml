@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "human-benchmark-bot"
-version = "0.2.0"
+version = "0.3.0"
 description = "Experimental, safety-gated desktop automation routines for selected Human Benchmark mini-games."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -20,13 +20,22 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+ui = [
+  "PySide6-Essentials>=6.7",
+]
 dev = [
   "pytest>=8.0",
   "ruff>=0.8",
+  "PySide6-Essentials>=6.7",
+]
+desktop-build = [
+  "PySide6-Essentials>=6.7",
+  "PyInstaller>=6.10",
 ]
 
 [project.scripts]
 human-benchmark-bot = "human_benchmark_bot.cli:main"
+human-benchmark-bot-ui = "human_benchmark_bot.ui.app:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

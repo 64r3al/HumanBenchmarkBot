@@ -1,0 +1,41 @@
+name: Build Windows desktop bundle
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "feature/desktop-ui-v0.3.0"
+    tags:
+      - "v*"
+
+concurrency:
+  group: windows-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Windows portable bundle
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Build portable desktop application
+        shell: pwsh
+        run: ./scripts/build_windows.ps1
+
+      - name: Upload Windows bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: HumanBenchmarkBot-Windows-x64
+          path: dist/HumanBenchmarkBot-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 30

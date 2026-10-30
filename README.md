@@ -2,7 +2,7 @@
 
 A Python desktop-automation prototype for selected [Human Benchmark](https://humanbenchmark.com/) mini-games. The project uses visible-screen detection, mouse/keyboard input, clipboard validation, and OCR. Its routines are experimental and may need recalibration when the website changes.
 
-> **Current version: 0.2.0 (hardening work in progress).** Passing unit tests does not prove that a routine works correctly on the live website. Each game needs supervised, real-browser testing before it should be considered reliable.
+> **Development version: 0.3.0 (desktop UI preview; not released).** Passing unit tests does not prove that a routine works correctly on the live website. Each game needs supervised, real-browser testing before it should be considered reliable.
 
 ## Safety first
 
@@ -30,7 +30,7 @@ The initial coordinate map is based on a 1920 × 1080 reference layout. Coordina
 
 - Python 3.10 or newer
 - A desktop session with a visible browser and mouse/keyboard control
-- Tesseract OCR installed separately for Verbal Memory
+- Tesseract OCR installed separately with the English (`eng`) language data for Verbal Memory
 - Clipboard support for Number Memory
 
 ## Installation
@@ -72,9 +72,67 @@ python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
-Install Tesseract from the official [Tesseract OCR project](https://github.com/tesseract-ocr/tesseract). If it is not on your `PATH`, provide its executable path using `--tesseract-cmd`.
+Install Tesseract from the official [Tesseract OCR project](https://github.com/tesseract-ocr/tesseract), including the English (`eng`) language data. GUI preflight runs Tesseract's `--list-langs` command and blocks Verbal Memory when the executable cannot run or the English data is missing. If it is not on your `PATH`, provide its executable path using `--tesseract-cmd` or Settings.
 
 ## Usage
+
+## Desktop UI (optional)
+
+The project includes an optional PySide6 desktop interface. It provides a dashboard, four game cards, run configuration, preview-only planning, preflight checks, viewport calibration, local settings, session logs, and a bounded, metadata-only local history.
+
+### Install and launch
+
+Install the GUI extra in the active virtual environment:
+
+```bash
+python -m pip install -e ".[ui]"
+python -m human_benchmark_bot.ui
+```
+
+Or use the installed entry point:
+
+```bash
+human-benchmark-bot-ui
+```
+
+### Build a portable Windows application
+
+A Windows one-folder build can be created locally from PowerShell:
+
+```powershell
+.\scripts\build_windows.ps1
+```
+
+The script creates `dist\HumanBenchmarkBot\HumanBenchmarkBot.exe` and `dist\HumanBenchmarkBot-Windows-x64.zip`. The ZIP must be extracted as a whole; do not move the executable out of its application folder.
+
+A matching GitHub Actions workflow is available from **Actions → Build Windows desktop bundle → Run workflow**. It uploads a Windows x64 ZIP artifact for 30 days. Pushing a `v*` tag also triggers the build workflow, but this workflow does not publish a GitHub Release automatically.
+
+The build checks that all four dynamically loaded game modules import from the frozen bundle and that the Qt app starts in offscreen mode before uploading the ZIP. The portable build bundles the Python application and Qt runtime. It does not bundle a browser or Tesseract OCR. Install Tesseract separately to use Verbal Memory. The application remains experimental and still requires calibration, preflight, explicit run confirmation, and review of live results.
+
+The desktop interface is kept modular: `app.py` owns application startup, `main_window.py` coordinates navigation and run state, `pages.py` builds the dashboard/game/run/calibration/history/settings pages, `dialogs.py` contains the safety and viewport-selection dialogs, `services.py` owns validation/preflight/history, and `workers.py` runs automation outside the Qt event loop.
+
+The existing command-line interface remains available and does not require the GUI extra. To run tests and quality checks, install the development dependencies:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest
+ruff check .
+ruff format --check .
+```
+
+### Using the GUI safely
+
+1. Open **Calibration**, click **Capture screen and select viewport**, confirm the prompt, and bring the browser/game window to the foreground during the 3-second countdown. The app hides before taking the screenshot; then drag a rectangle around the complete game area used by the selected routine.
+2. In **Run**, select one game, choose the interaction limit, and click **Run preflight**.
+3. Use **Preview only** to inspect the planned routine without opening a browser or sending desktop input.
+4. Start actual automation only after all blocking preflight checks pass and you explicitly acknowledge the safety confirmation.
+5. Keep the intended browser tab visible and do not use other desktop applications while a run is active. The **Request stop** action asks the routine to stop at its next cooperative cancellation checkpoint.
+
+The viewport is stored in the operating system's user configuration directory. It acts as a boundary guard for coordinates and screenshot regions; it does **not** automatically recalculate the routines' experimental reference points, correct browser zoom, or guarantee the expected browser window is focused. If the reference points do not fit the selected viewport, preflight blocks the run. Recalibrate whenever the display dimensions change.
+
+The GUI displays a run that returns without an uncaught error as **completed — review required**, not as proof of a verified game result. Current game routines remain experimental and require supervised real-browser validation. Clipboard access is checked when Number Memory runs; preflight does not read or overwrite the clipboard. Diagnostic screenshots are local and opt-in.
+
+Settings and history are stored locally. History stores only the timestamp, game, configured interaction limit, status, and elapsed time. Free-form error details, OCR text, answers, clipboard contents, and screenshots are excluded. Legacy history is sanitized on read so fields outside this metadata-only schema are removed from the saved file. No account, hosted backend, telemetry, or remote logging is required.
 
 ### Preview only (safe default)
 
@@ -123,7 +181,7 @@ Use `--debug` to save a screenshot when a supported detection failure occurs:
 python -m human_benchmark_bot --game reaction --allow-input --debug
 ```
 
-Diagnostic images are written to `diagnostics/` by default and are ignored by Git. Inspect them before sharing; they may contain unrelated desktop content. The debug flag is opt-in and is not required for normal runs.
+Diagnostic images are written to `diagnostics/` by default and are ignored by Git. They contain only the saved, calibrated game viewport—not the entire desktop. A valid viewport calibration is required; without one, screenshot capture is skipped and a warning is logged. Inspect images before sharing because the selected game area may still contain personal information. The debug flag is opt-in and is not required for normal runs.
 
 ## Tests and development
 

@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
-import time
-
 import pyautogui
 import pytesseract
 from PIL import Image, ImageOps
+from threading import Event
 
 from ..automation import (
     AutomationError,
     GameEnded,
+    check_cancelled,
     click_point,
+    emit_log,
+    LogCallback,
+    interruptible_sleep,
     open_game,
     reference_point,
     reference_region,
@@ -91,34 +94,48 @@ def run(
     *,
     debug: bool = False,
     diagnostics_dir: str = "diagnostics",
+    cancel_event: Event | None = None,
+    log_callback: LogCallback | None = None,
 ) -> None:
     """Classify words using OCR; stop on unreadable or terminal states."""
     if rounds < 1:
         raise ValueError("rounds must be at least 1.")
 
-    open_game("Verbal Memory", GAME_URLS["verbal"], load_wait)
+    open_game(
+        "Verbal Memory",
+        GAME_URLS["verbal"],
+        load_wait,
+        cancel_event=cancel_event,
+        log_callback=log_callback,
+    )
 
     start_point = reference_point(951, 507)
     seen_button = reference_point(870, 446)
     new_button = reference_point(1038, 444)
     word_region = reference_region(590, 292, 690, 75)
 
-    click_point(start_point)
-    time.sleep(0.6)
+    click_point(start_point, cancel_event=cancel_event)
+    interruptible_sleep(0.6, cancel_event)
 
     seen_words: set[str] = set()
     for turn in range(1, rounds + 1):
+        check_cancelled(cancel_event)
         screenshot = pyautogui.screenshot(region=word_region)
         try:
             word, confidence = read_displayed_word(screenshot)
+            check_cancelled(cancel_event)
         except GameEnded:
-            print(f"Verbal Memory ended after {turn - 1} completed interaction(s).")
+            emit_log(
+                f"Verbal Memory ended after {turn - 1} completed interaction(s).",
+                log_callback,
+            )
             return
         except (AutomationError, pytesseract.TesseractNotFoundError) as exc:
             save_diagnostic_screenshot(
                 "verbal-ocr-failed",
                 enabled=debug,
                 directory=diagnostics_dir,
+                log_callback=log_callback,
             )
             if isinstance(exc, pytesseract.TesseractNotFoundError):
                 raise AutomationError(
@@ -134,20 +151,23 @@ def run(
                 "verbal-word-invalid",
                 enabled=debug,
                 directory=diagnostics_dir,
+                log_callback=log_callback,
             )
             raise AutomationError(str(exc)) from exc
 
         button = seen_button if action == "seen" else new_button
-        click_point(button)
+        click_point(button, cancel_event=cancel_event)
         if turn == 1 or turn % 10 == 0:
-            print(
+            emit_log(
                 f"Verbal Memory: {turn}/{rounds} — {action} "
-                f"(OCR confidence {confidence:.1f}%)."
+                f"(OCR confidence {confidence:.1f}%).",
+                log_callback,
             )
-        time.sleep(0.25)
+        interruptible_sleep(0.25, cancel_event)
 
-    print(
+    emit_log(
         f"Verbal Memory routine reached its configured limit of {rounds} "
         f"interactions ({len(seen_words)} unique words). Verify the result "
-        "on screen; the routine may stop early if it detects a terminal state."
+        "on screen; the routine may stop early if it detects a terminal state.",
+        log_callback,
     )
