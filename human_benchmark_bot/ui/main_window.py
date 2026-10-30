@@ -531,6 +531,35 @@ class MainWindow(QMainWindow, MainWindowPages):
         )
 
     def _capture_calibration(self) -> None:
+        """Hide the app briefly so calibration captures the actual browser screen."""
+        if self._is_running():
+            QMessageBox.warning(
+                self,
+                "Run in progress",
+                "Stop the active routine before changing display calibration.",
+            )
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Prepare screen capture",
+            "The app will hide for 3 seconds. Bring the browser/game window to the "
+            "foreground during that time. The screen will then be captured so you "
+            "can select the complete game viewport.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        self.status_bar.showMessage(
+            "Capturing in 3 seconds — bring the intended browser window to the foreground."
+        )
+        self.hide()
+        QTimer.singleShot(3000, self._finish_calibration_capture)
+
+    def _finish_calibration_capture(self) -> None:
+        """Capture the visible desktop after the main window has been hidden."""
         try:
             import pyautogui
 
@@ -538,12 +567,20 @@ class MainWindow(QMainWindow, MainWindowPages):
             screen_width, screen_height = pyautogui.size()
             image_width, image_height = screenshot.size
         except Exception as exc:
+            self.showNormal()
+            self.raise_()
+            self.activateWindow()
             QMessageBox.warning(
                 self,
                 "Screen capture unavailable",
                 f"Could not capture the screen: {exc}",
             )
             return
+
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+
         if (screen_width, screen_height) != (image_width, image_height):
             QMessageBox.warning(
                 self,
@@ -552,6 +589,7 @@ class MainWindow(QMainWindow, MainWindowPages):
                 "This environment's HiDPI mapping cannot be calibrated safely by this UI.",
             )
             return
+
         rgb = screenshot.convert("RGB")
         raw = rgb.tobytes()
         image = QImage(
