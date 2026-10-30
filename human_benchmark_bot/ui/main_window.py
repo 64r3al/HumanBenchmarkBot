@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..config import DEFAULT_ROUNDS, MAX_ROUNDS
 from ..calibration import (
     CalibrationError,
     calibration_path,
@@ -34,6 +35,7 @@ from ..calibration import (
 from .dialogs import SafetyDialog, SelectionDialog
 from .pages import MainWindowPages, NAV_ITEMS, _muted_label
 from .services import (
+    GAME_DESCRIPTIONS,
     GAME_LABELS,
     HistoryStore,
     PreflightCheck,
@@ -154,7 +156,7 @@ class MainWindow(QMainWindow, MainWindowPages):
         self._refresh_history()
         self._show_calibration_status()
 
-def navigate(self, index: int) -> None:
+    def navigate(self, index: int) -> None:
         """Switch page and keep sidebar selection synchronized."""
         if not 0 <= index < self.stack.count() and self.stack.count() > 0:
             return
