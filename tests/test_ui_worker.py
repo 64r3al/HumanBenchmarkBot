@@ -57,6 +57,7 @@ def test_run_game_passes_logging_callback_to_routine(monkeypatch) -> None:
         "import_module",
         lambda *_args, **_kwargs: fake_module,
     )
+
     def callback(_level, _message):
         return None
 
