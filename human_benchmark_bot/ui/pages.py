@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -14,12 +15,12 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
-    QSizePolicy,
     QSpinBox,
     QVBoxLayout,
     QWidget,
 )
 
+from ..calibration import config_directory
 from ..config import DEFAULT_LOAD_WAIT, DEFAULT_ROUNDS, MAX_LOAD_WAIT, MAX_ROUNDS
 from .services import GAME_DESCRIPTIONS, GAME_LABELS
 
