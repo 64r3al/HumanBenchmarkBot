@@ -334,6 +334,7 @@ def run_game(
         diagnostics_dir=config.diagnostics_dir
         or str(config_directory() / "diagnostics"),
         cancel_event=cancel_event,
+        log_callback=log_callback,
     )
     elapsed = time.monotonic() - started
     if cancel_event.is_set():
