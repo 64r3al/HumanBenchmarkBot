@@ -110,7 +110,7 @@ def test_tesseract_probe_requires_english_language_data(monkeypatch) -> None:
         lambda *_args, **_kwargs: subprocess.CompletedProcess(
             args=["tesseract", "--list-langs"],
             returncode=0,
-            stdout="List of available languages in \"tessdata\":\nfra\n",
+            stdout='List of available languages in "tessdata":\nfra\n',
             stderr="",
         ),
     )
@@ -132,7 +132,7 @@ def test_tesseract_probe_accepts_available_english_language_data(monkeypatch) ->
         return subprocess.CompletedProcess(
             args=["tesseract", "--list-langs"],
             returncode=0,
-            stdout="List of available languages in \"tessdata\":\neng\nosd\n",
+            stdout='List of available languages in "tessdata":\neng\nosd\n',
             stderr="",
         )
 
