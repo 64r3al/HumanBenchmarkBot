@@ -373,9 +373,7 @@ class HistoryStore:
         if not isinstance(payload, list):
             return []
         return [
-            self._normalize_entry(item)
-            for item in payload
-            if isinstance(item, dict)
+            self._normalize_entry(item) for item in payload if isinstance(item, dict)
         ][-self.limit :]
 
     @staticmethod
